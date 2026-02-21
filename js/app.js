@@ -264,6 +264,10 @@ function setLang(lang) {
 // ПЕРЕКЛЮЧЕНИЕ ВИДОВ
 // ============================================================
 function showView(name) {
+  // Скрываем шапку в зале
+  var hdr = document.getElementById('hdr');
+  if (hdr) hdr.style.display = name === 'room' ? 'none' : '';
+
   S.view = name;
   D.sliderView.classList.toggle('hidden', name !== 'slider');
   D.roomView.classList.toggle('hidden',   name !== 'room');

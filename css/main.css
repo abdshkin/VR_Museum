@@ -477,32 +477,33 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 30;
+  z-index: 150;
 }
 
 #room-back-btn {
   position: absolute;
-  top: calc(var(--safe-top) + 12px);
+  top: calc(var(--safe-top) + var(--header-h) + 12px);
   left: 16px;
   pointer-events: all;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(15,13,10,0.75);
+  background: rgba(15,13,10,0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(212,168,83,0.2);
+  border: 1px solid rgba(212,168,83,0.4);
   color: var(--gold);
   font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   letter-spacing: 0.1em;
-  padding: 9px 16px;
+  padding: 11px 20px;
   border-radius: 8px;
   cursor: pointer;
   transition: var(--trans-fast);
+  z-index: 200;
 }
-#room-back-btn:hover { background: rgba(212,168,83,0.12); border-color: var(--gold); }
+#room-back-btn:hover { background: rgba(212,168,83,0.18); border-color: var(--gold); }
 
 #room-label {
   position: absolute;
