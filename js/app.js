@@ -1,339 +1,238 @@
 /**
  * KAZAKH ARTISTS VIRTUAL MUSEUM — js/app.js
- * ES6 module — orchestrates all features
- *
- * CUSTOMIZE: To add a new artist, edit data/artists.json only.
- * CUSTOMIZE: To change language strings, edit the LANG object below.
+ * Полная переработка: защита от ошибок, стабильный init, мобильный orbit
  */
 
 // ============================================================
 // LANGUAGE STRINGS
-// Add new languages here — then add a button in index.html
 // ============================================================
 const LANG = {
-  kz: {
-    back:       '← Артқа',
-    enterRoom:  'Залға кіру',
-    gallery:    'Галерея',
-    explore:    'Жалғастыр',
-    dragHint:   '📱 Айналдыру үшін сүйреп апарыңыз',
-    loading:    'Жүктелуде…',
-    bio:        'Суретші туралы',
-  },
-  ru: {
-    back:       '← Назад',
-    enterRoom:  'Войти в зал',
-    gallery:    'Галерея',
-    explore:    'Продолжить',
-    dragHint:   '📱 Перетяни для осмотра',
-    loading:    'Жүктелуде…',
-    bio:        'О художнике',
-  },
-  en: {
-    back:       '← Back',
-    enterRoom:  'Enter Room',
-    gallery:    'Gallery',
-    explore:    'Explore',
-    dragHint:   '📱 Drag to explore room',
-    loading:    'Loading…',
-    bio:        'About the Artist',
-  },
+  kz: { back: '← Артқа', enterRoom: 'Залға кіру', explore: 'Жалғастыр', dragHint: '📱 Айналдыру үшін сүйреп апарыңыз', bio: 'Суретші туралы' },
+  ru: { back: '← Назад',  enterRoom: 'Войти в зал', explore: 'Продолжить',  dragHint: '📱 Перетяни для осмотра',           bio: 'О художнике' },
+  en: { back: '← Back',   enterRoom: 'Enter Room',  explore: 'Explore',      dragHint: '📱 Drag to explore room',          bio: 'About the Artist' },
 };
 
 // ============================================================
-// STATE
-// ============================================================
-let state = {
-  artists:     [],
-  lang:        'ru',
-  current:     0,       // active slider index
-  autoTimer:   null,
-  isDragging:  false,
-  dragStartX:  0,
-  view:        'slider', // 'slider' | 'room'
-  activeArtist: null,
-};
-
-// ============================================================
-// DOM REFS (populated after DOMContentLoaded)
-// ============================================================
-let dom = {};
-
-// ============================================================
-// ВСТРОЕННЫЕ ДАННЫЕ — fallback если fetch не работает
-// (file:// протокол, CORS, нет сервера)
-// CUSTOMIZE: редактируй оба места — здесь и в data/artists.json
+// ДАННЫЕ ХУДОЖНИКОВ (встроенный fallback — работает без сервера)
 // ============================================================
 const ARTISTS_FALLBACK = [
   {
     id: 'telzhanov', years: '1918 – 1979', color: '#c4843a',
     name: { kz: 'Меңдіқали Тельжанов', ru: 'Мендикали Тельжанов', en: 'Mendikali Telzhanov' },
-    bio: {
-      kz: 'Қазақ реализмінің негізін қалаушы, оның табиғат пен халық тұрмысын бейнелеген шығармалары ұлттық суреттің алтын қорына енді.',
-      ru: 'Основоположник казахского реализма, его работы о природе и быте народа вошли в золотой фонд национальной живописи.',
-      en: 'Pioneer of Kazakh realism, his depictions of nature and daily life became cornerstones of national painting heritage.',
-    },
+    bio:  { kz: 'Қазақ реализмінің негізін қалаушы, оның табиғат пен халық тұрмысын бейнелеген шығармалары ұлттық суреттің алтын қорына енді.',
+            ru: 'Основоположник казахского реализма, его работы о природе и быте народа вошли в золотой фонд национальной живописи.',
+            en: 'Pioneer of Kazakh realism, his depictions of nature and daily life became cornerstones of national painting heritage.' },
     thumb: 'assets/images/thumbs/telzhanov_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/telzhanov_kz.jpg', ru: 'assets/images/infographics/telzhanov_ru.jpg', en: 'assets/images/infographics/telzhanov_en.jpg' },
   },
   {
     id: 'galimbayeva', years: '1917 – 1991', color: '#7a5c9e',
     name: { kz: 'Айша Ғалымбаева', ru: 'Айша Галимбаева', en: 'Aisha Galimbayeva' },
-    bio: {
-      kz: 'Қазақстандағы алғашқы кәсіби әйел суретші. Оның портреттері мен тарихи туындылары замандастарының рухын жеткізеді.',
-      ru: 'Первая профессиональная художница Казахстана. Её портреты и исторические полотна передают дух эпохи.',
-      en: 'The first professional female artist of Kazakhstan. Her portraits and historical canvases capture the spirit of her era.',
-    },
+    bio:  { kz: 'Қазақстандағы алғашқы кәсіби әйел суретші. Оның портреттері мен тарихи туындылары замандастарының рухын жеткізеді.',
+            ru: 'Первая профессиональная художница Казахстана. Её портреты и исторические полотна передают дух эпохи.',
+            en: 'The first professional female artist of Kazakhstan. Her portraits and historical canvases capture the spirit of her era.' },
     thumb: 'assets/images/thumbs/galimbayeva_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/galimbayeva_kz.jpg', ru: 'assets/images/infographics/galimbayeva_ru.jpg', en: 'assets/images/infographics/galimbayeva_en.jpg' },
   },
   {
     id: 'mullashev', years: '1922 – 2001', color: '#3a7a5c',
     name: { kz: 'Хакімжан Мулдашев', ru: 'Хакимжан Мулдашев', en: 'Khakimzhan Muldashev' },
-    bio: {
-      kz: 'Монументалды туындылармен атағы шыққан шебер — оның мозаикалары мен фрескалары жер бетінде бүгін де тұр.',
-      ru: 'Мастер монументального искусства — его мозаики и фрески сохранились в архитектуре страны по сей день.',
-      en: "Master of monumental art — his mosaics and frescoes remain embedded in the country's architecture to this day.",
-    },
+    bio:  { kz: 'Монументалды туындылармен атағы шыққан шебер — оның мозаикалары мен фрескалары жер бетінде бүгін де тұр.',
+            ru: 'Мастер монументального искусства — его мозаики и фрески сохранились в архитектуре страны по сей день.',
+            en: "Master of monumental art — his mosaics and frescoes remain embedded in the country's architecture to this day." },
     thumb: 'assets/images/thumbs/mullashev_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/mullashev_kz.jpg', ru: 'assets/images/infographics/mullashev_ru.jpg', en: 'assets/images/infographics/mullashev_en.jpg' },
   },
   {
     id: 'ismailova', years: '1929 – 2017', color: '#c44a4a',
     name: { kz: 'Гүлфайрус Ысмайылова', ru: 'Гульфайрус Исмаилова', en: 'Gulfairous Ismailova' },
-    bio: {
-      kz: 'Декоративті-қолданбалы өнер мен кескіндеменің синтезін жасаған суретші, халық мотивтерін заманауи тілге аударды.',
-      ru: 'Художница, синтезировавшая декоративное искусство и живопись, переведя народные мотивы на современный язык.',
-      en: 'Artist who synthesized decorative arts and painting, translating folk motifs into a contemporary visual language.',
-    },
+    bio:  { kz: 'Декоративті-қолданбалы өнер мен кескіндеменің синтезін жасаған суретші, халық мотивтерін заманауи тілге аударды.',
+            ru: 'Художница, синтезировавшая декоративное искусство и живопись, переведя народные мотивы на современный язык.',
+            en: 'Artist who synthesized decorative arts and painting, translating folk motifs into a contemporary visual language.' },
     thumb: 'assets/images/thumbs/ismailova_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/ismailova_kz.jpg', ru: 'assets/images/infographics/ismailova_ru.jpg', en: 'assets/images/infographics/ismailova_en.jpg' },
   },
   {
     id: 'kasteev', years: '1904 – 1973', color: '#4a6e9e',
     name: { kz: 'Әбілхан Қастеев', ru: 'Абильхан Кастеев', en: 'Abilkhan Kasteev' },
-    bio: {
-      kz: 'Қазақ кәсіби кескіндемесінің атасы деп аталады. Оның пейзаждары мен тарихи суреттері ұлттық мұражайдың шедеврлері.',
-      ru: 'Признан отцом казахской профессиональной живописи. Его пейзажи и исторические картины — шедевры национального музея.',
-      en: 'Recognized as the father of Kazakh professional painting. His landscapes and historical works are masterpieces of the national museum.',
-    },
+    bio:  { kz: 'Қазақ кәсіби кескіндемесінің атасы деп аталады. Оның пейзаждары мен тарихи суреттері ұлттық мұражайдың шедеврлері.',
+            ru: 'Признан отцом казахской профессиональной живописи. Его пейзажи и исторические картины — шедевры национального музея.',
+            en: 'Recognized as the father of Kazakh professional painting. His landscapes and historical works are masterpieces of the national museum.' },
     thumb: 'assets/images/thumbs/kasteev_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/kasteev_kz.jpg', ru: 'assets/images/infographics/kasteev_ru.jpg', en: 'assets/images/infographics/kasteev_en.jpg' },
   },
 ];
 
 // ============================================================
-// FETCH ARTISTS DATA
-// Пробует JSON, при ошибке — встроенный fallback (file:// safe)
+// СОСТОЯНИЕ
+// ============================================================
+const S = {
+  artists:      [],
+  lang:         'ru',
+  current:      0,
+  autoTimer:    null,
+  view:         'slider',
+  activeArtist: null,
+};
+
+// DOM-ссылки (заполняются в init)
+const D = {};
+
+// ============================================================
+// ЗАГРУЗКА ДАННЫХ
 // ============================================================
 async function loadArtists() {
   try {
     const res = await fetch('data/artists.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    if (Array.isArray(data.artists) && data.artists.length > 0) return data.artists;
+    if (Array.isArray(data.artists) && data.artists.length) return data.artists;
     throw new Error('empty');
   } catch (e) {
-    console.warn('artists.json недоступен, используем fallback:', e.message);
+    console.warn('Fallback to built-in data:', e.message);
     return ARTISTS_FALLBACK;
   }
 }
 
 // ============================================================
-// LANGUAGE
+// СЛАЙДЕР
+// ============================================================
+function buildSlider() {
+  D.track.innerHTML = '';
+  D.dots.innerHTML  = '';
+
+  S.artists.forEach((artist, i) => {
+    // Карточка
+    const card = document.createElement('div');
+    card.className = 'artist-card';
+    const initial = (artist.name.en || 'A')[0];
+    card.innerHTML =
+      '<div class="card-image-wrap">' +
+        '<img class="card-img" src="' + artist.thumb + '" alt="' + (artist.name.en || '') + '" loading="lazy"' +
+          ' onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+        '<div class="card-img-placeholder" style="display:none">' + initial + '</div>' +
+      '</div>' +
+      '<div class="card-bottom">' +
+        '<div class="card-years">' + artist.years + '</div>' +
+        '<div class="card-name">' + (artist.name[S.lang] || artist.name.en) + '</div>' +
+        '<div class="card-enter-btn"><span class="explore-lbl">' + LANG[S.lang].explore + '</span><span class="arrow-icon"></span></div>' +
+      '</div>';
+
+    card.addEventListener('click', function() { onCardClick(i); });
+    D.track.appendChild(card);
+
+    // Точка
+    const dot = document.createElement('button');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', function() { goTo(i); });
+    D.dots.appendChild(dot);
+  });
+}
+
+function updateCardText() {
+  D.track.querySelectorAll('.card-name').forEach(function(el, i) {
+    var a = S.artists[i];
+    if (a) el.textContent = a.name[S.lang] || a.name.en;
+  });
+  D.track.querySelectorAll('.explore-lbl').forEach(function(el) {
+    el.textContent = LANG[S.lang].explore;
+  });
+}
+
+function goTo(idx) {
+  var len = S.artists.length;
+  S.current = ((idx % len) + len) % len;
+  D.track.style.transform = 'translateX(-' + (S.current * 100) + '%)';
+  D.dots.querySelectorAll('.dot').forEach(function(d, i) {
+    d.classList.toggle('active', i === S.current);
+  });
+  S.activeArtist = S.artists[S.current];
+  refreshBio();
+}
+
+function next() { goTo(S.current + 1); }
+function prev() { goTo(S.current - 1); }
+
+function startAuto() {
+  stopAuto();
+  S.autoTimer = setInterval(next, 10000);
+}
+function stopAuto() {
+  if (S.autoTimer) { clearInterval(S.autoTimer); S.autoTimer = null; }
+}
+
+// Свайп на слайдере
+function initSwipe() {
+  var el = D.trackWrap;
+  var startX = 0;
+  el.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    stopAuto();
+  }, { passive: true });
+  el.addEventListener('touchend', function(e) {
+    var dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) { dx > 0 ? prev() : next(); }
+    startAuto();
+  }, { passive: true });
+}
+
+// ============================================================
+// BIO ПАНЕЛЬ
+// ============================================================
+function refreshBio() {
+  var artist = S.activeArtist;
+  if (!artist) return;
+  D.bioName.textContent  = artist.name[S.lang]  || artist.name.en  || '';
+  D.bioYears.textContent = artist.years || '';
+  D.bioText.textContent  = artist.bio[S.lang]   || artist.bio.en   || '';
+}
+
+function showBio()  { D.bioPanel.classList.add('visible'); }
+function hideBio()  { D.bioPanel.classList.remove('visible'); }
+
+function onCardClick(i) {
+  goTo(i);
+  showBio();
+}
+
+// ============================================================
+// ЯЗЫК
 // ============================================================
 function setLang(lang) {
-  state.lang = lang;
-
-  // Update buttons
-  dom.langBtns.forEach(btn => {
+  S.lang = lang;
+  D.langBtns.forEach(function(btn) {
     btn.classList.toggle('active', btn.dataset.lang === lang);
   });
-
-  // Update UI text
-  dom.backBtn.innerHTML  = LANG[lang].back;
-  dom.bioEnterBtn.textContent = LANG[lang].enterRoom;
-  dom.bioLabel.textContent    = LANG[lang].bio;
-  dom.gyroHint.innerHTML = `${LANG[lang].dragHint}<br><small>Drag to explore room</small>`;
-
-  // Refresh bio panel text for current artist
-  updateBioPanel();
-
-  // If in room view, update infographic texture
-  if (state.view === 'room' && state.activeArtist) {
-    updateRoomTexture(state.activeArtist);
+  D.backBtn.textContent    = LANG[lang].back;
+  D.bioEnterBtn.textContent = LANG[lang].enterRoom;
+  D.bioLabel.textContent   = LANG[lang].bio;
+  D.gyroHint.innerHTML     = LANG[lang].dragHint + '<br><small>Drag to explore</small>';
+  updateCardText();
+  refreshBio();
+  if (S.view === 'room' && S.activeArtist && threeCtx) {
+    buildRoom(S.activeArtist);
   }
 }
 
 // ============================================================
-// SLIDER BUILD
-// ============================================================
-function buildSlider() {
-  dom.sliderTrack.innerHTML = '';
-  dom.sliderDots.innerHTML  = '';
-
-  state.artists.forEach((artist, i) => {
-    // --- CARD ---
-    const card = document.createElement('div');
-    card.className   = 'artist-card';
-    card.setAttribute('role', 'button');
-    card.setAttribute('tabindex', '0');
-    card.setAttribute('aria-label', artist.name[state.lang] || artist.name.en);
-
-    const imgSrc   = artist.thumb;
-    const initial  = (artist.name.en || '?')[0];
-
-    card.innerHTML = `
-      <div class="card-image-wrap">
-        <img
-          class="card-img"
-          src="${imgSrc}"
-          alt="${artist.name.en}"
-          loading="lazy"
-          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
-        />
-        <div class="card-img-placeholder" style="display:none">${initial}</div>
-      </div>
-      <div class="card-bottom">
-        <div class="card-years">${artist.years}</div>
-        <div class="card-name" data-name="${artist.id}">${artist.name[state.lang] || artist.name.en}</div>
-        <div class="card-enter-btn">
-          <span data-key="explore">${LANG[state.lang].explore}</span>
-          <span class="arrow-icon"></span>
-        </div>
-      </div>
-    `;
-
-    // Click → show bio panel (mobile) or enter room (desktop)
-    card.addEventListener('click', () => selectArtist(i));
-    card.addEventListener('keypress', e => e.key === 'Enter' && selectArtist(i));
-
-    dom.sliderTrack.appendChild(card);
-
-    // --- DOT ---
-    const dot = document.createElement('button');
-    dot.className = `dot${i === 0 ? ' active' : ''}`;
-    dot.setAttribute('aria-label', `Artist ${i + 1}`);
-    dot.addEventListener('click', () => goTo(i));
-    dom.sliderDots.appendChild(dot);
-  });
-}
-
-function updateCardNames() {
-  document.querySelectorAll('.card-name[data-name]').forEach((el, i) => {
-    const artist = state.artists[i];
-    if (artist) el.textContent = artist.name[state.lang] || artist.name.en;
-  });
-  document.querySelectorAll('.card-enter-btn [data-key="explore"]').forEach(el => {
-    el.textContent = LANG[state.lang].explore;
-  });
-}
-
-// ============================================================
-// SLIDER NAVIGATION
-// ============================================================
-function goTo(index) {
-  state.current = ((index % state.artists.length) + state.artists.length) % state.artists.length;
-  const offset  = state.current * 100;
-  dom.sliderTrack.style.transform = `translateX(-${offset}%)`;
-
-  // Dots
-  document.querySelectorAll('.dot').forEach((d, i) => {
-    d.classList.toggle('active', i === state.current);
-  });
-
-  // Show bio panel
-  selectArtist(state.current, false);
-}
-
-function next() { goTo(state.current + 1); }
-function prev() { goTo(state.current - 1); }
-
-function startAuto() {
-  stopAuto();
-  state.autoTimer = setInterval(() => next(), 10000);
-}
-function stopAuto() {
-  if (state.autoTimer) { clearInterval(state.autoTimer); state.autoTimer = null; }
-}
-
-// ============================================================
-// BIO PANEL
-// ============================================================
-function selectArtist(index, showPanel = true) {
-  state.current     = index;
-  state.activeArtist = state.artists[index];
-  updateBioPanel();
-  if (showPanel) showBio();
-}
-
-function updateBioPanel() {
-  const artist = state.activeArtist || state.artists[state.current];
-  if (!artist) return;
-  dom.bioName.textContent  = artist.name[state.lang]  || artist.name.en;
-  dom.bioYears.textContent = artist.years;
-  dom.bioText.textContent  = artist.bio[state.lang]   || artist.bio.en;
-  dom.bioLabel.textContent = LANG[state.lang].bio;
-  dom.bioEnterBtn.textContent = LANG[state.lang].enterRoom;
-}
-
-function showBio() {
-  dom.bioPanel.classList.add('visible');
-}
-
-function hideBio() {
-  dom.bioPanel.classList.remove('visible');
-}
-
-// ============================================================
-// TOUCH / SWIPE
-// ============================================================
-function initSwipe() {
-  const el = dom.sliderTrackWrapper;
-  let startX = 0, moved = false;
-
-  el.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-    moved  = false;
-    stopAuto();
-  }, { passive: true });
-
-  el.addEventListener('touchmove', e => {
-    moved = Math.abs(e.touches[0].clientX - startX) > 8;
-  }, { passive: true });
-
-  el.addEventListener('touchend', e => {
-    if (!moved) return;
-    const dx = e.changedTouches[0].clientX - startX;
-    if (Math.abs(dx) > 50) dx > 0 ? prev() : next();
-    startAuto();
-  });
-}
-
-// ============================================================
-// VIEW TRANSITIONS
+// ПЕРЕКЛЮЧЕНИЕ ВИДОВ
 // ============================================================
 function showView(name) {
-  state.view = name;
-  dom.sliderView.classList.toggle('hidden', name !== 'slider');
-  dom.roomView.classList.toggle('hidden',   name !== 'room');
+  S.view = name;
+  D.sliderView.classList.toggle('hidden', name !== 'slider');
+  D.roomView.classList.toggle('hidden',   name !== 'room');
 }
 
 function enterRoom(artist) {
-  state.activeArtist = artist;
+  S.activeArtist = artist;
   hideBio();
   stopAuto();
-
-  // Update room label
-  dom.roomLabelName.textContent  = artist.name[state.lang] || artist.name.en;
-  dom.roomLabelYears.textContent = artist.years;
-
-  // Show gyro hint → fade after 4s
-  dom.gyroHint.classList.remove('fade');
-  setTimeout(() => dom.gyroHint.classList.add('fade'), 4000);
-
-  buildRoom(artist);
+  D.roomLabelName.textContent  = artist.name[S.lang] || artist.name.en;
+  D.roomLabelYears.textContent = artist.years;
+  D.gyroHint.classList.remove('fade');
+  setTimeout(function() { D.gyroHint.classList.add('fade'); }, 4000);
   showView('room');
+  buildRoom(artist);
 }
 
 function goBack() {
@@ -343,482 +242,377 @@ function goBack() {
 }
 
 // ============================================================
-// 3D ROOM (Three.js)
+// 3D ЗАЛ — Three.js
 // ============================================================
-let threeCtx = null;
+var threeCtx = null;
 
 function buildRoom(artist) {
   destroyRoom();
 
-  const container = dom.aframeContainer;
-  const W = container.clientWidth;
-  const H = container.clientHeight;
+  var container = D.roomContainer;
+  var W = container.clientWidth  || window.innerWidth;
+  var H = container.clientHeight || window.innerHeight;
 
-  // ---- Renderer ----
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  var renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(W, H);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
-  renderer.outputEncoding    = THREE.sRGBEncoding;
   container.appendChild(renderer.domElement);
 
-  // ---- Scene ----
-  const scene = new THREE.Scene();
+  var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1510);
   scene.fog = new THREE.Fog(0x1a1510, 8, 20);
 
-  // ---- Camera ----
-  const camera = new THREE.PerspectiveCamera(65, W / H, 0.1, 50);
-  camera.position.set(0, 1.6, 0.1);
+  var camera = new THREE.PerspectiveCamera(65, W / H, 0.1, 50);
+  camera.position.set(0, 1.62, 0);
 
-  // ---- Orbit (mouse + touch) ----
-  const orbit = createOrbitControls(camera, renderer.domElement);
+  // Свет
+  scene.add(new THREE.AmbientLight(0xfff5e0, 0.55));
+  var dir = new THREE.DirectionalLight(0xffe8c0, 1.3);
+  dir.position.set(2, 5, 3);
+  dir.castShadow = true;
+  scene.add(dir);
+  var pt = new THREE.PointLight(0xd4a853, 0.9, 8);
+  pt.position.set(0, 3.5, 0);
+  scene.add(pt);
 
-  // ---- Lights ----
-  const ambient = new THREE.AmbientLight(0xfff5e0, 0.5);
-  scene.add(ambient);
+  // Материалы
+  var mFloor   = new THREE.MeshLambertMaterial({ color: 0x3d2f1e });
+  var mWall    = new THREE.MeshLambertMaterial({ color: 0x2a2018 });
+  var mCeil    = new THREE.MeshLambertMaterial({ color: 0x1e1a12 });
+  var mMold    = new THREE.MeshLambertMaterial({ color: 0xd4a853 });
+  var mFrame   = new THREE.MeshLambertMaterial({ color: 0x8b6914 });
+  var mDark    = new THREE.MeshLambertMaterial({ color: 0x1a1410 });
 
-  const dirLight = new THREE.DirectionalLight(0xffe8c0, 1.4);
-  dirLight.position.set(2, 5, 3);
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.set(1024, 1024);
-  scene.add(dirLight);
+  var rW = 7, rH = 4.5, rD = 8;
 
-  // Warm point from above (chandelier-style)
-  const pointLight = new THREE.PointLight(0xd4a853, 1.0, 8);
-  pointLight.position.set(0, 3.5, 0);
-  scene.add(pointLight);
-
-  // ---- ROOM GEOMETRY ----
-  const mats = {
-    floor:    new THREE.MeshLambertMaterial({ color: 0x3d2f1e }),
-    wall:     new THREE.MeshLambertMaterial({ color: 0x2a2018 }),
-    ceiling:  new THREE.MeshLambertMaterial({ color: 0x1e1a12 }),
-    molding:  new THREE.MeshLambertMaterial({ color: 0xd4a853 }),
-    frame:    new THREE.MeshLambertMaterial({ color: 0x8b6914 }),
-    dark:     new THREE.MeshLambertMaterial({ color: 0x1a1410 }),
-  };
-
-  const roomW = 7, roomH = 4.5, roomD = 8;
-
-  // Floor
-  addBox(scene, roomW, 0.05, roomD, 0, 0, 0, mats.floor, true);
-
-  // Ceiling
-  addBox(scene, roomW, 0.05, roomD, 0, roomH, 0, mats.ceiling);
-
-  // Back wall
-  addBox(scene, roomW, roomH, 0.1, 0, roomH/2, -roomD/2, mats.wall);
-
-  // Front wall (behind camera)
-  addBox(scene, roomW, roomH, 0.1, 0, roomH/2, roomD/2, mats.wall);
-
-  // Side walls
-  addBox(scene, 0.1, roomH, roomD, -roomW/2, roomH/2, 0, mats.wall);
-  addBox(scene, 0.1, roomH, roomD,  roomW/2, roomH/2, 0, mats.wall);
-
-  // Gold molding strips along floor/ceiling
-  addBox(scene, roomW, 0.06, 0.06,  0, 0.03,   -roomD/2 + 0.05, mats.molding); // floor front
-  addBox(scene, roomW, 0.06, 0.06,  0, roomH-0.03, -roomD/2 + 0.05, mats.molding); // ceiling front
-
-  // ---- MAIN WALL INFOGRAPHIC ----
-  const infPath = (artist.infographic && artist.infographic[state.lang])
-    ? artist.infographic[state.lang]
-    : null;
-
-  if (infPath) {
-    const loader = new THREE.TextureLoader();
-    loader.load(
-      infPath,
-      texture => {
-        texture.encoding = THREE.sRGBEncoding;
-        const mat = new THREE.MeshLambertMaterial({ map: texture });
-        addBox(scene, 4, 2.6, 0.01, 0, 2.2, -roomD/2 + 0.12, mat);
-      },
-      undefined,
-      () => addFallbackPanel(scene, artist, roomD)
-    );
-  } else {
-    addFallbackPanel(scene, artist, roomD);
+  function box(w, h, d, x, y, z, mat, shadow) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    if (shadow) m.receiveShadow = true;
+    m.castShadow = true;
+    scene.add(m);
+    return m;
   }
 
-  // Gold picture frame around infographic
-  addFrame(scene, 4.15, 2.75, -roomD/2 + 0.11, mats.frame);
+  // Комната
+  box(rW, 0.05, rD,  0, 0,    0,      mFloor, true);
+  box(rW, 0.05, rD,  0, rH,   0,      mCeil);
+  box(rW, rH,   0.1, 0, rH/2, -rD/2,  mWall);
+  box(rW, rH,   0.1, 0, rH/2,  rD/2,  mWall);
+  box(0.1, rH,  rD, -rW/2, rH/2, 0,   mWall);
+  box(0.1, rH,  rD,  rW/2, rH/2, 0,   mWall);
 
-  // ---- DECORATIONS: Shelves + Books ----
-  addShelf(scene, mats, -roomW/2 + 0.12, 2.0, -1.5);
-  addShelf(scene, mats, -roomW/2 + 0.12, 1.3, -1.5);
-  addBooks(scene, -roomW/2 + 0.12, 2.05, -1.5);
-  addBooks(scene, -roomW/2 + 0.12, 1.35, -1.5);
+  // Молдинги
+  box(rW, 0.06, 0.06, 0, 0.03,    -rD/2 + 0.05, mMold);
+  box(rW, 0.06, 0.06, 0, rH-0.03, -rD/2 + 0.05, mMold);
 
-  // ---- DECORATIONS: Pedestal ----
-  addPedestal(scene, mats, 2.5, 0, -2.5, artist.color || '#c4843a');
+  // Рамка
+  var fw = 4.15, fh = 2.75, fz = -rD/2 + 0.11, ft = 0.12;
+  box(fw, ft, ft,  0,    fh/2,  fz, mFrame);
+  box(fw, ft, ft,  0,   -fh/2,  fz, mFrame);
+  box(ft, fh, ft, -fw/2, 0,     fz, mFrame);
+  box(ft, fh, ft,  fw/2, 0,     fz, mFrame);
 
-  // ---- RESIZE ----
+  // Инфографика или цветная заглушка
+  var infPath = artist.infographic && artist.infographic[S.lang]
+    ? artist.infographic[S.lang] : null;
+
+  if (infPath) {
+    new THREE.TextureLoader().load(
+      infPath,
+      function(tex) {
+        var m = new THREE.Mesh(
+          new THREE.BoxGeometry(4, 2.6, 0.01),
+          new THREE.MeshLambertMaterial({ map: tex })
+        );
+        m.position.set(0, 2.2, -rD/2 + 0.12);
+        scene.add(m);
+      },
+      undefined,
+      function() { fallbackPanel(); }
+    );
+  } else {
+    fallbackPanel();
+  }
+
+  function fallbackPanel() {
+    box(4, 2.6, 0.01, 0, 2.2, -rD/2 + 0.12,
+      new THREE.MeshLambertMaterial({ color: new THREE.Color(artist.color || '#c4843a') }));
+  }
+
+  // Полки и книги
+  box(0.05, 0.04, 1.2, -rW/2+0.79, 2.0, -1.5, mMold);
+  box(0.05, 0.04, 1.2, -rW/2+0.79, 1.3, -1.5, mMold);
+  var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080];
+  for (var bi = 0; bi < 5; bi++) {
+    var bw = 0.06 + (bi * 0.008), bh = 0.22 + (bi * 0.02);
+    box(bw, bh, 0.18, -rW/2+0.38+(bi*0.13), 2.0+bh/2, -1.5,
+      new THREE.MeshLambertMaterial({ color: bColors[bi] }));
+    box(bw, bh, 0.18, -rW/2+0.38+(bi*0.13), 1.3+bh/2, -1.5,
+      new THREE.MeshLambertMaterial({ color: bColors[(bi+2)%5] }));
+  }
+
+  // Пьедестал со сферой
+  box(0.4, 0.9, 0.4, 2.5, 0.45, -2.5, mDark, true);
+  var sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 16, 16),
+    new THREE.MeshLambertMaterial({ color: new THREE.Color(artist.color || '#c4843a') })
+  );
+  sphere.position.set(2.5, 1.08, -2.5);
+  scene.add(sphere);
+
+  // Orbit controls
+  var orbit = createOrbit(camera, renderer.domElement);
+
+  // Resize
   function onResize() {
-    const w = container.clientWidth, h = container.clientHeight;
+    var w = container.clientWidth || window.innerWidth;
+    var h = container.clientHeight || window.innerHeight;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
   }
   window.addEventListener('resize', onResize);
 
-  // Сохраняем контекст ДО старта loop — loop обновляет animId по ссылке
-  threeCtx = { renderer, animId: null, onResize, orbit };
+  // Сохраняем контекст до старта loop
+  threeCtx = { renderer: renderer, animId: null, onResize: onResize, orbit: orbit };
 
-  // ---- LOOP ----
+  // Render loop
   function animate() {
     threeCtx.animId = requestAnimationFrame(animate);
     orbit.update();
     renderer.render(scene, camera);
   }
   animate();
-
-  // Store for texture updates
-  threeCtx.updateTexture = () => buildRoom(artist);
-
-// ---- Orbit Controls — Mobile-First, Touch-Safe ----
-// Fixes:
-//  • All listeners on canvas element only (не на window) — не конфликтуют со слайдером
-//  • touchmove с preventDefault() — блокирует системный скролл внутри 3D-зала
-//  • Гироскоп и touch разделены: touch-драг отключает гироскоп на время касания
-//  • Все слушатели собираются в массив и удаляются в destroy() — нет утечек
-//  • Скорость (thetaSpeed/phiSpeed) сбрасывается при новом touchstart — нет "заморозки"
-function createOrbitControls(camera, domEl) {
-  // --- Угловое состояние камеры ---
-  const orb = {
-    theta:       0,             // горизонтальный угол (рад)
-    phi:         Math.PI / 2,   // вертикальный угол (рад)
-    thetaVel:    0,             // скорость по theta (инерция)
-    phiVel:      0,             // скорость по phi (инерция)
-    lastX:       0,
-    lastY:       0,
-    active:      false,         // палец/мышь нажаты прямо сейчас
-    useGyro:     false,         // гироскоп разрешён и активен
-    gyroBase:    null,          // начальный alpha гироскопа
-    touchActive: false,         // пользователь касается экрана
-  };
-
-  const SENSITIVITY = 0.006;   // чувствительность свайпа
-  const DAMPING     = 0.85;    // затухание инерции (меньше = быстрее остановка)
-  const PHI_MIN     = 0.25;    // не смотреть выше потолка
-  const PHI_MAX     = Math.PI - 0.25; // не смотреть ниже пола
-
-  // --- Список слушателей для cleanup ---
-  const _listeners = [];
-  function on(el, type, fn, opts) {
-    el.addEventListener(type, fn, opts);
-    _listeners.push({ el, type, fn, opts });
-  }
-
-  // =====================================================
-  // TOUCH (основное управление на мобиле)
-  // =====================================================
-  on(domEl, 'touchstart', e => {
-    if (e.touches.length !== 1) return; // игнорируем мультитач
-    orb.active      = true;
-    orb.touchActive = true;
-    orb.lastX    = e.touches[0].clientX;
-    orb.lastY    = e.touches[0].clientY;
-    // Сбрасываем инерцию чтобы не "дёргало" при новом касании
-    orb.thetaVel = 0;
-    orb.phiVel   = 0;
-    // Гироскоп отключается на время ручного свайпа
-    orb.gyroBase = null;
-  }, { passive: true });
-
-  on(domEl, 'touchmove', e => {
-    if (!orb.active || e.touches.length !== 1) return;
-    // ВАЖНО: preventDefault блокирует скролл страницы внутри 3D-зала
-    // passive:false обязателен для этого
-    e.preventDefault();
-
-    const dx = e.touches[0].clientX - orb.lastX;
-    const dy = e.touches[0].clientY - orb.lastY;
-
-    orb.thetaVel = dx * SENSITIVITY;
-    orb.phiVel   = -dy * SENSITIVITY;
-    orb.theta   += orb.thetaVel;
-    orb.phi     += orb.phiVel;
-    orb.phi      = Math.max(PHI_MIN, Math.min(PHI_MAX, orb.phi));
-
-    orb.lastX = e.touches[0].clientX;
-    orb.lastY = e.touches[0].clientY;
-  }, { passive: false }); // ← НЕ passive — нужен preventDefault
-
-  on(domEl, 'touchend', e => {
-    orb.active      = false;
-    orb.touchActive = false;
-    // Инерция сохраняется — продолжит гасить в update()
-  }, { passive: true });
-
-  on(domEl, 'touchcancel', e => {
-    orb.active      = false;
-    orb.touchActive = false;
-    orb.thetaVel    = 0;
-    orb.phiVel      = 0;
-  }, { passive: true });
-
-  // =====================================================
-  // MOUSE (десктоп)
-  // =====================================================
-  on(domEl, 'mousedown', e => {
-    orb.active   = true;
-    orb.lastX    = e.clientX;
-    orb.lastY    = e.clientY;
-    orb.thetaVel = 0;
-    orb.phiVel   = 0;
-    domEl.style.cursor = 'grabbing';
-  });
-
-  // mousemove и mouseup — на document чтобы не терять курсор за пределами canvas
-  const onMouseMove = e => {
-    if (!orb.active) return;
-    const dx = e.clientX - orb.lastX;
-    const dy = e.clientY - orb.lastY;
-    orb.thetaVel = dx * SENSITIVITY * 0.7;
-    orb.phiVel   = -dy * SENSITIVITY * 0.7;
-    orb.theta   += orb.thetaVel;
-    orb.phi     += orb.phiVel;
-    orb.phi      = Math.max(PHI_MIN, Math.min(PHI_MAX, orb.phi));
-    orb.lastX    = e.clientX;
-    orb.lastY    = e.clientY;
-  };
-  const onMouseUp = () => {
-    orb.active = false;
-    domEl.style.cursor = 'grab';
-  };
-  on(document, 'mousemove', onMouseMove);
-  on(document, 'mouseup',   onMouseUp);
-  domEl.style.cursor = 'grab';
-
-  // =====================================================
-  // ГИРОСКОП (DeviceOrientation)
-  // Включается только если touch не активен — нет конфликта
-  // =====================================================
-  const onOrientation = e => {
-    if (orb.touchActive || !orb.useGyro) return;
-    if (e.beta == null || e.gamma == null)  return;
-
-    // Захватываем базовую точку при первом событии после включения
-    if (orb.gyroBase === null) {
-      orb.gyroBase = { alpha: e.alpha || 0, beta: e.beta, gamma: e.gamma };
-      return;
-    }
-
-    // Горизонтальное вращение — gamma (наклон телефона влево/вправо)
-    const dGamma = (e.gamma - orb.gyroBase.gamma);
-    // Вертикальное — beta (наклон вперёд/назад)
-    const dBeta  = (e.beta  - orb.gyroBase.beta);
-
-    orb.theta = -dGamma * (Math.PI / 180) * 1.2;
-    orb.phi   = Math.max(PHI_MIN, Math.min(PHI_MAX,
-      Math.PI / 2 - dBeta * (Math.PI / 180) * 0.8
-    ));
-  };
-  on(window, 'deviceorientation', onOrientation);
-
-  // iOS 13+ требует явного разрешения пользователя
-  if (typeof DeviceOrientationEvent !== 'undefined') {
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // Запрашиваем при первом тапе — уже есть жест пользователя
-      const reqGyro = async () => {
-        try {
-          const perm = await DeviceOrientationEvent.requestPermission();
-          if (perm === 'granted') {
-            orb.useGyro  = true;
-            orb.gyroBase = null;
-          }
-        } catch (_) {}
-      };
-      on(domEl, 'touchend', reqGyro, { once: true, passive: true });
-    } else {
-      // Android и старые Safari — гироскоп сразу доступен
-      orb.useGyro  = true;
-      orb.gyroBase = null;
-    }
-  }
-
-  // =====================================================
-  // UPDATE — вызывается каждый кадр из animate()
-  // =====================================================
-  function update() {
-    // Применяем инерцию только когда не касаемся экрана
-    if (!orb.active) {
-      orb.theta    += orb.thetaVel;
-      orb.phi      += orb.phiVel;
-      orb.thetaVel *= DAMPING;
-      orb.phiVel   *= DAMPING;
-      // Гасим до нуля чтобы не было вечного дрейфа
-      if (Math.abs(orb.thetaVel) < 0.0001) orb.thetaVel = 0;
-      if (Math.abs(orb.phiVel)   < 0.0001) orb.phiVel   = 0;
-      orb.phi = Math.max(PHI_MIN, Math.min(PHI_MAX, orb.phi));
-    }
-
-    // Камера стоит на месте, смотрит в точку на сфере вокруг неё
-    const R  = 3.0;
-    const ex = Math.sin(orb.phi) * Math.sin(orb.theta);
-    const ey = Math.cos(orb.phi);
-    const ez = -Math.sin(orb.phi) * Math.cos(orb.theta);
-
-    camera.position.set(0, 1.62, 0);
-    camera.lookAt(ex * R, 1.62 + ey * R * 0.6, ez * R);
-  }
-
-  // =====================================================
-  // DESTROY — убираем всех слушателей при выходе из зала
-  // =====================================================
-  function destroy() {
-    _listeners.forEach(({ el, type, fn, opts }) => {
-      el.removeEventListener(type, fn, opts);
-    });
-    _listeners.length = 0;
-    domEl.style.cursor = '';
-  }
-
-  return { update, destroy, orb };
-}
-
-function addBox(scene, w, h, d, x, y, z, mat, receiveShadow = false) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-  mesh.position.set(x, y, z);
-  mesh.receiveShadow = receiveShadow;
-  mesh.castShadow    = true;
-  scene.add(mesh);
-  return mesh;
-}
-
-function addFallbackPanel(scene, artist, roomD) {
-  // Color plane with artist initials as "painting"
-  const colorStr = artist.color || '#c4843a';
-  const col = new THREE.Color(colorStr);
-  const mat = new THREE.MeshLambertMaterial({ color: col });
-  addBox(scene, 4, 2.6, 0.01, 0, 2.2, -roomD/2 + 0.12, mat);
-}
-
-function addFrame(scene, w, h, z, mat) {
-  const t = 0.12;
-  // Top, bottom, left, right frame bars
-  addBox(scene, w, t, t,  0,   h/2,  z, mat);
-  addBox(scene, w, t, t,  0,  -h/2,  z, mat);
-  addBox(scene, t, h, t, -w/2, 0,    z, mat);
-  addBox(scene, t, h, t,  w/2, 0,    z, mat);
-}
-
-function addShelf(scene, mats, x, y, z) {
-  addBox(scene, 0.05, 0.04, 1.2, x + 0.67, y, z, mats.molding);
-}
-
-function addBooks(scene, x, y, z) {
-  const colors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080];
-  for (let i = 0; i < 5; i++) {
-    const w  = 0.06 + Math.random() * 0.04;
-    const hh = 0.22 + Math.random() * 0.12;
-    const mat = new THREE.MeshLambertMaterial({ color: colors[i] });
-    addBox(scene, w, hh, 0.18, x + 0.38 + i * 0.13, y + hh/2, z, mat);
-  }
-}
-
-function addPedestal(scene, mats, x, y, z, colorStr) {
-  addBox(scene, 0.4, 0.9, 0.4, x, y + 0.45, z, mats.dark, true);
-  const col = new THREE.Color(colorStr);
-  const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.18, 16, 16),
-    new THREE.MeshLambertMaterial({ color: col })
-  );
-  sphere.position.set(x, y + 0.9 + 0.18, z);
-  scene.add(sphere);
 }
 
 function destroyRoom() {
   if (!threeCtx) return;
   cancelAnimationFrame(threeCtx.animId);
-  // Убираем ВСЕ touch/mouse/gyro слушатели orbit через его destroy()
-  if (threeCtx.orbit && threeCtx.orbit.destroy) threeCtx.orbit.destroy();
+  if (threeCtx.orbit) threeCtx.orbit.destroy();
   window.removeEventListener('resize', threeCtx.onResize);
   threeCtx.renderer.dispose();
-  const canvas = threeCtx.renderer.domElement;
-  if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+  var canvas = threeCtx.renderer.domElement;
+  if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
   threeCtx = null;
 }
 
-function updateRoomTexture(artist) {
-  if (threeCtx) buildRoom(artist);
+// ============================================================
+// ORBIT CONTROLS — мобильный, без утечек
+// ============================================================
+function createOrbit(camera, canvas) {
+  var o = {
+    theta: 0, phi: Math.PI / 2,
+    vTheta: 0, vPhi: 0,
+    lastX: 0, lastY: 0,
+    down: false,
+    touchDown: false,
+    gyroOn: false,
+    gyroBase: null,
+  };
+
+  var SENS  = 0.006;
+  var DAMP  = 0.84;
+  var PHMIN = 0.28;
+  var PHMAX = Math.PI - 0.28;
+
+  // Список слушателей для cleanup
+  var listeners = [];
+  function add(el, type, fn, opt) {
+    el.addEventListener(type, fn, opt);
+    listeners.push([el, type, fn, opt]);
+  }
+
+  // --- TOUCH ---
+  add(canvas, 'touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    o.down = true; o.touchDown = true;
+    o.lastX = e.touches[0].clientX;
+    o.lastY = e.touches[0].clientY;
+    o.vTheta = 0; o.vPhi = 0;
+    o.gyroBase = null; // сбрасываем базу гироскопа при касании
+  }, { passive: true });
+
+  add(canvas, 'touchmove', function(e) {
+    if (!o.down || e.touches.length !== 1) return;
+    e.preventDefault(); // блокируем системный скролл
+    var dx = e.touches[0].clientX - o.lastX;
+    var dy = e.touches[0].clientY - o.lastY;
+    o.vTheta =  dx * SENS;
+    o.vPhi   = -dy * SENS;
+    o.theta += o.vTheta;
+    o.phi   += o.vPhi;
+    o.phi    = Math.max(PHMIN, Math.min(PHMAX, o.phi));
+    o.lastX  = e.touches[0].clientX;
+    o.lastY  = e.touches[0].clientY;
+  }, { passive: false }); // НЕ passive — нужен preventDefault
+
+  add(canvas, 'touchend',    function() { o.down = false; o.touchDown = false; }, { passive: true });
+  add(canvas, 'touchcancel', function() { o.down = false; o.touchDown = false; o.vTheta = 0; o.vPhi = 0; }, { passive: true });
+
+  // --- MOUSE (десктоп) ---
+  add(canvas, 'mousedown', function(e) {
+    o.down = true; o.lastX = e.clientX; o.lastY = e.clientY;
+    o.vTheta = 0; o.vPhi = 0;
+    canvas.style.cursor = 'grabbing';
+  });
+  var mmove = function(e) {
+    if (!o.down) return;
+    var dx = e.clientX - o.lastX, dy = e.clientY - o.lastY;
+    o.vTheta =  dx * SENS * 0.7;
+    o.vPhi   = -dy * SENS * 0.7;
+    o.theta += o.vTheta; o.phi += o.vPhi;
+    o.phi = Math.max(PHMIN, Math.min(PHMAX, o.phi));
+    o.lastX = e.clientX; o.lastY = e.clientY;
+  };
+  var mup = function() { o.down = false; canvas.style.cursor = 'grab'; };
+  add(document, 'mousemove', mmove);
+  add(document, 'mouseup',   mup);
+  canvas.style.cursor = 'grab';
+
+  // --- ГИРОСКОП ---
+  var onOrientation = function(e) {
+    if (o.touchDown || !o.gyroOn || e.beta == null) return;
+    if (o.gyroBase === null) {
+      o.gyroBase = { beta: e.beta, gamma: e.gamma || 0 };
+      return;
+    }
+    var dG = (e.gamma || 0) - o.gyroBase.gamma;
+    var dB = e.beta         - o.gyroBase.beta;
+    o.theta = -dG * (Math.PI / 180) * 1.1;
+    o.phi   = Math.max(PHMIN, Math.min(PHMAX, Math.PI/2 - dB * (Math.PI/180) * 0.7));
+  };
+  add(window, 'deviceorientation', onOrientation);
+
+  // iOS требует разрешения
+  if (typeof DeviceOrientationEvent !== 'undefined') {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      add(canvas, 'touchend', function reqGyro() {
+        DeviceOrientationEvent.requestPermission().then(function(p) {
+          if (p === 'granted') { o.gyroOn = true; o.gyroBase = null; }
+        }).catch(function() {});
+        canvas.removeEventListener('touchend', reqGyro);
+      }, { passive: true });
+    } else {
+      o.gyroOn = true; o.gyroBase = null;
+    }
+  }
+
+  return {
+    update: function() {
+      if (!o.down) {
+        o.theta  += o.vTheta; o.phi += o.vPhi;
+        o.vTheta *= DAMP;     o.vPhi *= DAMP;
+        if (Math.abs(o.vTheta) < 0.0001) o.vTheta = 0;
+        if (Math.abs(o.vPhi)   < 0.0001) o.vPhi   = 0;
+        o.phi = Math.max(PHMIN, Math.min(PHMAX, o.phi));
+      }
+      var R  = 3.0;
+      var ex = Math.sin(o.phi) * Math.sin(o.theta);
+      var ey = Math.cos(o.phi);
+      var ez = -Math.sin(o.phi) * Math.cos(o.theta);
+      camera.position.set(0, 1.62, 0);
+      camera.lookAt(ex * R, 1.62 + ey * R * 0.5, ez * R);
+    },
+    destroy: function() {
+      listeners.forEach(function(l) { l[0].removeEventListener(l[1], l[2], l[3]); });
+      listeners = [];
+      canvas.style.cursor = '';
+    },
+  };
 }
 
 // ============================================================
-// INIT
+// ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 async function init() {
-  // Collect DOM
-  dom = {
-    loader:             document.getElementById('loader'),
-    sliderView:         document.getElementById('slider-view'),
-    roomView:           document.getElementById('room-view'),
-    sliderTrack:        document.getElementById('slider-track'),
-    sliderTrackWrapper: document.getElementById('slider-track-wrapper'),
-    sliderDots:         document.getElementById('slider-dots'),
-    prevBtn:            document.getElementById('prev-arrow'),
-    nextBtn:            document.getElementById('next-arrow'),
-    backBtn:            document.getElementById('back-btn'),
-    bioPanel:           document.getElementById('bio-panel'),
-    bioName:            document.getElementById('bio-name'),
-    bioYears:           document.getElementById('bio-years'),
-    bioText:            document.getElementById('bio-text'),
-    bioEnterBtn:        document.getElementById('bio-enter-btn'),
-    bioLabel:           document.getElementById('bio-label'),
-    aframeContainer:    document.getElementById('aframe-container'),
-    roomLabelName:      document.getElementById('room-label-name'),
-    roomLabelYears:     document.getElementById('room-label-years'),
-    gyroHint:           document.getElementById('gyro-hint'),
-    langBtns:           document.querySelectorAll('.lang-btn'),
-  };
+  // Собираем DOM — с явными проверками
+  D.loader       = document.getElementById('loader');
+  D.sliderView   = document.getElementById('slider-view');
+  D.roomView     = document.getElementById('room-view');
+  D.track        = document.getElementById('slider-track');
+  D.trackWrap    = document.getElementById('slider-track-wrapper');
+  D.dots         = document.getElementById('slider-dots');
+  D.prevBtn      = document.getElementById('prev-arrow');
+  D.nextBtn      = document.getElementById('next-arrow');
+  D.backBtn      = document.getElementById('back-btn');
+  D.bioPanel     = document.getElementById('bio-panel');
+  D.bioName      = document.getElementById('bio-name');
+  D.bioYears     = document.getElementById('bio-years');
+  D.bioText      = document.getElementById('bio-text');
+  D.bioEnterBtn  = document.getElementById('bio-enter-btn');
+  D.bioLabel     = document.getElementById('bio-label');
+  D.roomContainer = document.getElementById('aframe-container');
+  D.roomLabelName  = document.getElementById('room-label-name');
+  D.roomLabelYears = document.getElementById('room-label-years');
+  D.gyroHint     = document.getElementById('gyro-hint');
+  D.langBtns     = document.querySelectorAll('.lang-btn');
 
-  // Load data
-  state.artists = await loadArtists();
-
-  // Защита — если данные не загрузились даже из fallback
-  if (!state.artists || state.artists.length === 0) {
-    document.getElementById('loader').innerHTML =
-      '<div style="color:#c4843a;font-family:serif;text-align:center;padding:20px">' +
-      'Ошибка загрузки данных.<br><small>Откройте через локальный сервер или GitHub Pages</small></div>';
+  // Проверяем критичные элементы
+  var missing = ['track','trackWrap','dots','bioPanel','roomContainer'].filter(function(k) { return !D[k]; });
+  if (missing.length) {
+    console.error('Missing DOM elements:', missing);
+    if (D.loader) D.loader.innerHTML = '<div style="color:#c44;padding:20px;text-align:center">DOM error: ' + missing.join(', ') + '</div>';
     return;
   }
 
-  // Build UI
-  state.lang = 'ru'; // устанавливаем язык ДО buildSlider
+  // Загружаем данные
+  try {
+    S.artists = await loadArtists();
+  } catch(e) {
+    S.artists = ARTISTS_FALLBACK;
+  }
+
+  // Строим слайдер
   buildSlider();
   initSwipe();
-  setLang('ru');
-  goTo(0);
+
+  // Язык
+  S.lang = 'ru';
+  D.langBtns.forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.lang === 'ru');
+  });
+
+  // Первый художник
+  S.current      = 0;
+  S.activeArtist = S.artists[0];
+  D.track.style.transform = 'translateX(0%)';
+  refreshBio();
+
+  // События кнопок
+  if (D.prevBtn) D.prevBtn.addEventListener('click', function() { prev(); stopAuto(); startAuto(); });
+  if (D.nextBtn) D.nextBtn.addEventListener('click', function() { next(); stopAuto(); startAuto(); });
+  if (D.backBtn) D.backBtn.addEventListener('click', goBack);
+
+  if (D.bioEnterBtn) {
+    D.bioEnterBtn.addEventListener('click', function() {
+      if (S.activeArtist) enterRoom(S.activeArtist);
+    });
+  }
+
+  if (D.langBtns) {
+    D.langBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() { setLang(btn.dataset.lang); });
+    });
+  }
+
+  // Автопрокрутка
   startAuto();
 
-  // Events
-  dom.prevBtn.addEventListener('click', () => { prev(); stopAuto(); startAuto(); });
-  dom.nextBtn.addEventListener('click', () => { next(); stopAuto(); startAuto(); });
-
-  dom.backBtn.addEventListener('click', goBack);
-
-  dom.bioEnterBtn.addEventListener('click', () => {
-    const artist = state.activeArtist || state.artists[state.current];
-    if (artist) enterRoom(artist);
-  });
-
-  // Close bio on background tap
-  dom.sliderView.addEventListener('click', e => {
-    if (e.target === dom.sliderView) hideBio();
-  });
-
-  dom.langBtns.forEach(btn => {
-    btn.addEventListener('click', () => setLang(btn.dataset.lang));
-  });
-
-  // Done — hide loader
-  setTimeout(() => dom.loader.classList.add('hidden'), 600);
+  // Скрываем лоадер
+  setTimeout(function() {
+    if (D.loader) D.loader.classList.add('hidden');
+  }, 400);
 }
 
-// ============================================================
-// BOOT
-// ============================================================
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', function() {
+  init().catch(function(err) {
+    console.error('Museum init failed:', err);
+    var loader = document.getElementById('loader');
+    if (loader) loader.innerHTML =
+      '<div style="color:#c44;font-family:sans-serif;padding:20px;text-align:center">' +
+      'Ошибка инициализации<br><small>' + err.message + '</small></div>';
+  });
+});
