@@ -1,21 +1,27 @@
 /* ============================================================
-   css/room.css — UI поверх 3D-зала
+   css/room.css — UI поверх 3D-зала (Three.js)
    ============================================================ */
 
-/* --- Вид зала --- */
 #room-view {
   background: #080706;
-  transform: scale(1.04); /* схлопывается при .active */
+  transform: scale(1.04); /* анимация входа */
 }
 
-/* A-Frame занимает весь экран */
+/* Three.js canvas занимает весь контейнер */
 #aframe-container {
   position: absolute;
   inset: 0;
-}
-#aframe-container a-scene {
   width: 100%;
   height: 100%;
+  overflow: hidden;
+}
+/* canvas рисуется Three.js — убедимся что размер правильный */
+#aframe-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+  touch-action: none; /* отключить браузерный скролл на canvas */
 }
 
 /* --- Оверлей поверх 3D --- */
@@ -52,7 +58,7 @@
   background: var(--gold-dim);
 }
 
-/* --- Подсказка гироскопа (исчезает через 4с) --- */
+/* --- Подсказка гироскопа --- */
 #gyro-hint {
   position: absolute;
   top: 70px;
@@ -67,14 +73,14 @@
   color: var(--muted);
   text-align: center;
   pointer-events: none;
-  animation: hint-fade 4s 1s forwards;
+  animation: hint-fade 4s 1.5s forwards;
 }
 @keyframes hint-fade {
   0%, 70% { opacity: 1; }
   100%     { opacity: 0; visibility: hidden; }
 }
 
-/* --- Плашка имени художника (снизу) --- */
+/* --- Плашка художника снизу --- */
 #room-label {
   position: absolute;
   bottom: 22px;
