@@ -1,109 +1,120 @@
 /**
- * KAZAKH ARTISTS VIRTUAL MUSEUM — app.js
- * Clean rewrite: no smart quotes, defensive init, quaternion gyro, pinch-zoom, back button in room
+ * KAZAKH ARTISTS VIRTUAL MUSEUM — js/app.js
+ * Orbit viewer (Google Street View style) + trilingual UI + working back button
  */
 
-// ─── LANGUAGE STRINGS ────────────────────────────────────────────────────────
+// ============================================================
+// LANGUAGE STRINGS
+// ============================================================
 var LANG = {
   kz: {
-    back:       '← Артқа',
-    enterRoom:  'Залға кіру',
-    explore:    'Жалғастыру',
-    dragHint:   '📱 Айналдыру үшін сүйреп апарыңыз',
-    bio:        'Суретші туралы',
-    loading:    'Жүктелуде…',
-    gallery:    'Галерея',
-    eyebrow:    'Қазақстан · Өнер · Art',
-    title:      'Ұлы Суретшілер',
+    back:      '← Артқа',
+    enterRoom: 'Залға кіру',
+    explore:   'Жалғастыр',
+    dragHint:  '📱 Айналдыру үшін сүйреп апарыңыз',
+    bio:       'Суретші туралы',
+    eyebrow:   'Қазақстан · Өнер · Art',
+    title:     'Ұлы Суретшілер',
   },
   ru: {
-    back:       '← Назад',
-    enterRoom:  'Войти в зал',
-    explore:    'Продолжить',
-    dragHint:   '📱 Перетяни для осмотра',
-    bio:        'О художнике',
-    loading:    'Жүктелуде…',
-    gallery:    'Галерея',
-    eyebrow:    'Казахстан · Өнер · Art',
-    title:      'Ұлы Суретшілер',
+    back:      '← Назад',
+    enterRoom: 'Войти в зал',
+    explore:   'Продолжить',
+    dragHint:  '📱 Перетяни для осмотра',
+    bio:       'О художнике',
+    eyebrow:   'Казахстан · Өнер · Art',
+    title:     'Ұлы Суретшілер',
   },
   en: {
-    back:       '← Back',
-    enterRoom:  'Enter Room',
-    explore:    'Explore',
-    dragHint:   '📱 Drag to explore room',
-    bio:        'About the Artist',
-    loading:    'Loading…',
-    gallery:    'Gallery',
-    eyebrow:    'Kazakhstan · Өнер · Art',
-    title:      'Great Artists',
+    back:      '← Back',
+    enterRoom: 'Enter Room',
+    explore:   'Explore',
+    dragHint:  '📱 Drag to explore room',
+    bio:       'About the Artist',
+    eyebrow:   'Kazakhstan · Өнер · Art',
+    title:     'Great Artists',
   },
 };
 
-// ─── ARTIST DATA (inline fallback — works without server / file://) ──────────
-var ARTISTS = [
+// ============================================================
+// ДАННЫЕ ХУДОЖНИКОВ (встроенный fallback — работает без сервера)
+// ============================================================
+var ARTISTS_FALLBACK = [
   {
-    id: 'telzhanov', years: '1927 \u2013 2013', color: '#c4843a',
-    name: { kz: '\u041c\u04b1\u0445\u0430\u043c\u0435\u0434\u0445\u0430\u043d\u0430\u0444\u0438\u044f \u0422\u0435\u043b\u044c\u0436\u0430\u043d\u043e\u0432', ru: '\u041c\u0443\u0445\u0430\u043c\u0435\u0434\u0445\u0430\u043d\u0430\u0444\u0438\u044f \u0422\u0435\u043b\u044c\u0436\u0430\u043d\u043e\u0432', en: 'Mukhamedhanafia Telzhanov' },
+    id: 'telzhanov', years: '1927 – 2013', color: '#c4843a',
+    name: { kz: 'Мұхамедханафия Тельжанов', ru: 'Мухамедханафия Тельжанов', en: 'Mukhamedhanafia Telzhanov' },
     bio: {
-      kz: '\u049a\u0430\u0437\u0430\u049b \u041a\u0421\u0420 \u0436\u04d9\u043d\u0435 \u041a\u0421\u0420\u041e \u0445\u0430\u043b\u044b\u049b \u0441\u0443\u0440\u0435\u0442\u0448\u0456\u0441\u0456 (1978). \u041e\u043c\u0441\u043a\u0456\u0434\u0435 \u0442\u0443\u044b\u043b\u0493\u0430\u043d, \u041b\u0435\u043d\u0438\u043d\u0433\u0440\u0430\u0434\u0442\u0430 \u0420\u0435\u043f\u0438\u043d \u0430\u0442\u044b\u043d\u0434\u0430\u0493\u044b \u0438\u043d\u0441\u0442\u0438\u0442\u0443\u0442\u0442\u044b \u0431\u0456\u0442\u0456\u0440\u0433\u0435\u043d (1953). \u00ab\u0416\u0430\u043c\u0430\u043b\u00bb, \u00ab\u0414\u043e\u043c\u0431\u044b\u0440\u0430\u043d\u044b\u04a3 \u04af\u043d\u0456\u00bb, \u00ab\u0410\u0442\u0430\u043c\u0435\u043a\u0435\u043d\u00bb \u0442\u0443\u044b\u043d\u0434\u044b\u043b\u0430\u0440\u044b \u049b\u0430\u0437\u0430\u049b \u043a\u0435\u0441\u043a\u0456\u043d\u0434\u0435\u043c\u0435\u0441\u0456\u043d\u0456\u04a3 \u043a\u043b\u0430\u0441\u0441\u0438\u043a\u0430\u0441\u044b\u043d\u0430 \u0430\u0439\u043d\u0430\u043b\u0434\u044b. \u049a\u0430\u0437\u0430\u049b\u0441\u0442\u0430\u043d \u0441\u0443\u0440\u0435\u0442\u0448\u0456\u043b\u0435\u0440 \u043e\u0434\u0430\u0493\u044b\u043d \u0431\u0430\u0441\u049b\u0430\u0440\u0493\u0430\u043d (1964\u20131968).',
-      ru: '\u041d\u0430\u0440\u043e\u0434\u043d\u044b\u0439 \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a \u041a\u0430\u0437\u0421\u0421\u0420 \u0438 \u0421\u0421\u0421\u0420 (1978). \u0420\u043e\u0434\u0438\u043b\u0441\u044f \u0432 \u041e\u043c\u0441\u043a\u0435, \u043e\u043a\u043e\u043d\u0447\u0438\u043b \u0418\u043d\u0441\u0442\u0438\u0442\u0443\u0442 \u0436\u0438\u0432\u043e\u043f\u0438\u0441\u0438 \u0438\u043c. \u0420\u0435\u043f\u0438\u043d\u0430 \u0432 \u041b\u0435\u043d\u0438\u043d\u0433\u0440\u0430\u0434\u0435 (1953). \u0415\u0433\u043e \u0440\u0430\u0431\u043e\u0442\u044b \u00ab\u0416\u0430\u043c\u0430\u043b\u00bb, \u00ab\u0417\u0432\u0443\u043a\u0438 \u0434\u043e\u043c\u0431\u0440\u044b\u00bb, \u00ab\u041d\u0430 \u0437\u0435\u043c\u043b\u0435 \u0434\u0435\u0434\u043e\u0432\u00bb \u2014 \u043a\u043b\u0430\u0441\u0441\u0438\u043a\u0430 \u043a\u0430\u0437\u0430\u0445\u0441\u043a\u043e\u0439 \u0436\u0438\u0432\u043e\u043f\u0438\u0441\u0438. \u0412\u043e\u0437\u0433\u043b\u0430\u0432\u043b\u044f\u043b \u0421\u043e\u044e\u0437 \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a\u043e\u0432 \u041a\u0430\u0437\u0430\u0445\u0441\u0442\u0430\u043d\u0430 (1964\u20131968) \u0438 \u041c\u0443\u0437\u0435\u0439 \u0438\u0441\u043a\u0443\u0441\u0441\u0442\u0432 \u0438\u043c. \u041a\u0430\u0441\u0442\u0435\u0435\u0432\u0430.',
-      en: "People's Artist of the Kazakh SSR and USSR (1978). Born in Omsk, graduated from the Repin Institute in Leningrad (1953). His works Zhamal, Sounds of the Dombra and Native Land are classics of Kazakh painting. Led the Union of Artists of Kazakhstan (1964-1968).",
+      kz: 'Қазақ КСР және КСРО халық суретшісі (1978). Омскіде туылған, Репин атындағы институтты бітірген (1953). «Жамал», «Домбыраның үні», «Атамекен» туындылары қазақ кескіндемесінің классикасына айналды.',
+      ru: 'Народный художник КазССР и СССР (1978). Родился в Омске, окончил Институт живописи им. Репина (1953). Работы «Жамал», «Звуки домбры», «На земле дедов» стали классикой казахской живописи.',
+      en: "People's Artist of the Kazakh SSR and USSR (1978). Born in Omsk, graduated from the Repin Institute (1953). His works 'Zhamal', 'Sounds of the Dombra' and 'Native Land' are classics of Kazakh painting.",
     },
     thumb: 'assets/images/thumbs/telzhanov_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/telzhanov_kz.jpg', ru: 'assets/images/infographics/telzhanov_ru.jpg', en: 'assets/images/infographics/telzhanov_en.jpg' },
   },
   {
-    id: 'galimbayeva', years: '1917 \u2013 2008', color: '#7a5c9e',
-    name: { kz: '\u0410\u0439\u0448\u0430 \u0492\u0430\u043b\u044b\u043c\u0431\u0430\u0435\u0432\u0430', ru: '\u0410\u0439\u0448\u0430 \u0413\u0430\u043b\u0438\u043c\u0431\u0430\u0435\u0432\u0430', en: 'Aisha Galimbayeva' },
+    id: 'galimbayeva', years: '1917 – 2008', color: '#7a5c9e',
+    name: { kz: 'Айша Ғалымбаева', ru: 'Айша Галимбаева', en: 'Aisha Galimbayeva' },
     bio: {
-      kz: '\u049a\u0430\u0437\u0430\u049b\u0441\u0442\u0430\u043d\u043d\u044b\u04a3 \u0430\u043b\u0493\u0430\u0448\u049b\u044b \u043a\u04d9\u0441\u0456\u0431\u0438 \u0441\u0443\u0440\u0435\u0442\u0448\u0456 \u04d9\u0439\u0435\u043b\u0456, \u049a\u0430\u0437\u041a\u0421\u0420 \u0445\u0430\u043b\u044b\u049b \u0441\u0443\u0440\u0435\u0442\u0448\u0456\u0441\u0456 (1967). \u0415\u0441\u0456\u043a \u049b\u0430\u043b\u0430\u0441\u044b\u043d\u0434\u0430 \u0442\u0443\u044b\u043b\u0493\u0430\u043d. \u0412\u0413\u0418\u041a-\u0442\u0456 \u0431\u0456\u0442\u0456\u0440\u0433\u0435\u043d (1949). \u00ab\u049a\u0430\u0437\u0430\u049b \u0445\u0430\u043b\u044b\u049b \u043a\u043e\u0441\u0442\u044e\u043c\u0456\u00bb \u0430\u043b\u044c\u0431\u043e\u043c\u044b\u043d\u044b\u04a3 \u0430\u0432\u0442\u043e\u0440\u044b. \u0412\u0430\u043b\u0438\u0445\u0430\u043d\u043e\u0432 \u0430\u0442\u044b\u043d\u0434\u0430\u0493\u044b \u043c\u0435\u043c\u043b\u0435\u043a\u0435\u0442\u0442\u0456\u043a \u0441\u044b\u0439\u043b\u044b\u049b\u044b\u043d\u044b\u04a3 \u043b\u0430\u0443\u0440\u0435\u0430\u0442\u044b (1972).',
-      ru: '\u041f\u0435\u0440\u0432\u0430\u044f \u043f\u0440\u043e\u0444\u0435\u0441\u0441\u0438\u043e\u043d\u0430\u043b\u044c\u043d\u0430\u044f \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u0446\u0430-\u043a\u0430\u0437\u0430\u0448\u043a\u0430, \u043d\u0430\u0440\u043e\u0434\u043d\u044b\u0439 \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a \u041a\u0430\u0437\u0421\u0421\u0420 (1967). \u0420\u043e\u0434\u0438\u043b\u0430\u0441\u044c \u0432 \u0418\u0441\u0441\u044b\u043a\u0435. \u041e\u043a\u043e\u043d\u0447\u0438\u043b\u0430 \u0412\u0413\u0418\u041a (1949). \u0410\u0432\u0442\u043e\u0440 \u0430\u043b\u044c\u0431\u043e\u043c\u0430 \u00ab\u041a\u0430\u0437\u0430\u0445\u0441\u043a\u0438\u0439 \u043d\u0430\u0440\u043e\u0434\u043d\u044b\u0439 \u043a\u043e\u0441\u0442\u044e\u043c\u00bb. \u041b\u0430\u0443\u0440\u0435\u0430\u0442 \u0413\u043e\u0441\u043f\u0440\u0435\u043c\u0438\u0438 \u0438\u043c. \u0412\u0430\u043b\u0438\u0445\u0430\u043d\u043e\u0432\u0430 (1972). \u0421\u0440\u0435\u0434\u0438 \u043f\u043e\u0440\u0442\u0440\u0435\u0442\u043e\u0432 \u2014 \u043e\u0431\u0440\u0430\u0437\u044b \u0410\u0431\u0430\u044f, \u0411\u0430\u0439\u0441\u0435\u0438\u0442\u043e\u0432\u043e\u0439, \u041c\u0443\u0441\u0442\u0430\u0444\u0438\u043d\u0430.',
-      en: "The first professional Kazakh female artist, People's Artist of the Kazakh SSR (1967). Born in Issyk. Graduated from VGIK (1949). Author of the album Kazakh National Costume. State Prize laureate (1972). Her portraits include Abai, Baisseitova and Mustafin.",
+      kz: 'Қазақстанның алғашқы кәсіби суретші әйелі, ҚазКСР халық суретшісі (1967). ВГИК кино факультетін бітірген (1949). «Қазақ халық костюмі» альбомының авторы.',
+      ru: 'Первая профессиональная художница-казашка, народный художник КазССР (1967). Окончила художественно-декоративный факультет ВГИКа (1949). Автор альбома «Казахский народный костюм».',
+      en: "The first professional Kazakh female artist, People's Artist of the Kazakh SSR (1967). Graduated from VGIK (1949). Author of the album 'Kazakh National Costume'.",
     },
     thumb: 'assets/images/thumbs/galimbayeva_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/galimbayeva_kz.jpg', ru: 'assets/images/infographics/galimbayeva_ru.jpg', en: 'assets/images/infographics/galimbayeva_en.jpg' },
   },
   {
-    id: 'mullashev', years: '1944 \u2013 \u043d.\u0432.', color: '#3a7a5c',
-    name: { kz: '\u041a\u0430\u043c\u0438\u043b\u044c \u041c\u0443\u043b\u043b\u0430\u0448\u0435\u0432', ru: '\u041a\u0430\u043c\u0438\u043b\u044c \u041c\u0443\u043b\u043b\u0430\u0448\u0435\u0432', en: 'Kamil Mullashev' },
+    id: 'mullashev', years: '1944 – н.в.', color: '#3a7a5c',
+    name: { kz: 'Камиль Муллашев', ru: 'Камиль Муллашев', en: 'Kamil Mullashev' },
     bio: {
-      kz: '\u049a\u0430\u0437\u0430\u049b\u0441\u0442\u0430\u043d \u043c\u0435\u043d \u0422\u0430\u0442\u0430\u0440\u0441\u0442\u0430\u043d\u043d\u044b\u04a3 \u0435\u04a3\u0431\u0435\u043a \u0441\u0456\u04a3\u0456\u0440\u0433\u0435\u043d \u0441\u0443\u0440\u0435\u0442\u0448\u0456\u0441\u0456. \u049a\u044b\u0442\u0430\u0439\u0434\u044b\u04a3 \u04ae\u0440\u0456\u043c\u0436\u0456 \u049b\u0430\u043b\u0430\u0441\u044b\u043d\u0434\u0430 \u0442\u0443\u044b\u043b\u0493\u0430\u043d (1944), \u0421\u0443\u0440\u0438\u043a\u043e\u0432 \u0430\u0442\u044b\u043d\u0434\u0430\u0493\u044b \u041c\u041a\u04e8\u0418-\u0434\u0456 \u0431\u0456\u0442\u0456\u0440\u0433\u0435\u043d (1978). \u00ab\u0416\u0435\u0440 \u0436\u04d9\u043d\u0435 \u0443\u0430\u049b\u044b\u0442. \u049a\u0430\u0437\u0430\u049b\u0441\u0442\u0430\u043d\u00bb \u0442\u0440\u0438\u043f\u0442\u0438\u0445\u0456 \u041f\u0430\u0440\u0438\u0436\u0434\u0435\u0433\u0456 \u0413\u0440\u0430\u043d\u0434-\u041f\u0430\u043b\u0435\u0434\u0435 \u043a\u04e9\u0440\u0441\u0435\u0442\u0456\u043b\u0434\u0456. \u0424\u0440\u0430\u043d\u0446\u0438\u044f \u04e8\u043d\u0435\u0440 \u0430\u043a\u0430\u0434\u0435\u043c\u0438\u044f\u0441\u044b\u043d\u044b\u04a3 \u043a\u04af\u043c\u0456\u0441 \u043c\u0435\u0434\u0430\u043b\u0456.',
-      ru: '\u0417\u0430\u0441\u043b\u0443\u0436\u0435\u043d\u043d\u044b\u0439 \u0434\u0435\u044f\u0442\u0435\u043b\u044c \u0438\u0441\u043a\u0443\u0441\u0441\u0442\u0432 \u041a\u0430\u0437\u0430\u0445\u0441\u0442\u0430\u043d\u0430 \u0438 \u043d\u0430\u0440\u043e\u0434\u043d\u044b\u0439 \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a \u0422\u0430\u0442\u0430\u0440\u0441\u0442\u0430\u043d\u0430. \u0420\u043e\u0434\u0438\u043b\u0441\u044f \u0432 \u0423\u0440\u0443\u043c\u0447\u0438 (\u041a\u041d\u0420, 1944), \u043e\u043a\u043e\u043d\u0447\u0438\u043b \u041c\u0413\u0425\u0418 \u0438\u043c. \u0421\u0443\u0440\u0438\u043a\u043e\u0432\u0430 (1978). \u0422\u0440\u0438\u043f\u0442\u0438\u0445 \u00ab\u0417\u0435\u043c\u043b\u044f \u0438 \u0432\u0440\u0435\u043c\u044f. \u041a\u0430\u0437\u0430\u0445\u0441\u0442\u0430\u043d\u00bb \u044d\u043a\u0441\u043f\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043b\u0441\u044f \u0432 \u0413\u0440\u0430\u043d\u0434-\u041f\u0430\u043b\u0435 \u0432 \u041f\u0430\u0440\u0438\u0436\u0435, \u0441\u0435\u0440\u0435\u0431\u0440\u044f\u043d\u0430\u044f \u043c\u0435\u0434\u0430\u043b\u044c \u0410\u043a\u0430\u0434\u0435\u043c\u0438\u0438 \u0445\u0443\u0434\u043e\u0436\u0435\u0441\u0442\u0432 \u0424\u0440\u0430\u043d\u0446\u0438\u0438.',
-      en: "Honored Artist of Kazakhstan and People's Artist of Tatarstan. Born in Urumqi, China (1944), graduated from the Surikov Art Institute in Moscow (1978). His triptych Land and Time. Kazakhstan was shown at the Grand Palais in Paris, earning a silver medal from the French Academy of Arts.",
+      kz: 'Қазақстан мен Татарстанның еңбек сіңірген суретшісі. «Жер және уақыт. Қазақстан» триптихі Париждегі Гранд-Пале мен бүкіл дүниежүзінде таныс.',
+      ru: 'Заслуженный деятель искусств Казахстана и народный художник Татарстана. Триптих «Земля и время. Казахстан» экспонировался в Гранд-Пале в Париже, серебряная медаль Академии художеств Франции.',
+      en: "Honored Artist of Kazakhstan and People's Artist of Tatarstan. His triptych 'Land and Time. Kazakhstan' was shown at the Grand Palais in Paris, winning a silver medal from the French Academy of Arts.",
     },
     thumb: 'assets/images/thumbs/mullashev_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/mullashev_kz.jpg', ru: 'assets/images/infographics/mullashev_ru.jpg', en: 'assets/images/infographics/mullashev_en.jpg' },
   },
   {
-    id: 'ismailova', years: '1929 \u2013 2013', color: '#c44a4a',
-    name: { kz: '\u0413\u04af\u043b\u0444\u0430\u0439\u0440\u0443\u0441 \u042b\u0441\u043c\u0430\u0439\u044b\u043b\u043e\u0432\u0430', ru: '\u0413\u0443\u043b\u044c\u0444\u0430\u0439\u0440\u0443\u0441 \u0418\u0441\u043c\u0430\u0438\u043b\u043e\u0432\u0430', en: 'Gulfairous Ismailova' },
+    id: 'ismailova', years: '1929 – 2013', color: '#c44a4a',
+    name: { kz: 'Гүлфайрус Ысмайылова', ru: 'Гульфайрус Исмаилова', en: 'Gulfairous Ismailova' },
     bio: {
-      kz: '\u049a\u0430\u0437\u041a\u0421\u0420 \u0445\u0430\u043b\u044b\u049b \u0441\u0443\u0440\u0435\u0442\u0448\u0456\u0441\u0456 (1987), \u0430\u043a\u0442\u0440\u0438\u0441\u0430. \u0410\u043b\u043c\u0430\u0442\u044b\u0434\u0430 \u0442\u0443\u044b\u043b\u0493\u0430\u043d. \u0420\u0435\u043f\u0438\u043d \u0430\u0442\u044b\u043d\u0434\u0430\u0493\u044b \u041b\u0416\u0421\u041a\u0410-\u043d\u044b \u0431\u0456\u0442\u0456\u0440\u0433\u0435\u043d (1956). \u00ab\u049a\u0430\u0437\u0430\u049b \u0432\u0430\u043b\u044c\u0441\u0456\u00bb \u2014 \u041a\u0430\u0441\u0442\u0435\u0435\u0432 \u043c\u04b1\u0440\u0430\u0436\u0430\u0439\u044b\u043d\u044b\u04a3 \u0433\u0430\u0443\u04bb\u0430\u0440\u044b. \u0410\u0431\u0430\u0439 \u0430\u0442\u044b\u043d\u0434\u0430\u0493\u044b \u043e\u043f\u0435\u0440\u0430 \u0442\u0435\u0430\u0442\u0440\u044b\u043d\u044b\u04a3 \u0431\u0430\u0441 \u0441\u0443\u0440\u0435\u0442\u0448\u0456\u0441\u0456 (16 \u0436\u044b\u043b). \u00ab\u049a\u044b\u0437 \u0416\u0456\u0431\u0435\u043a\u00bb \u0444\u0438\u043b\u044c\u043c\u0456\u043d\u0456\u04a3 \u0431\u0435\u0437\u0435\u043d\u0434\u0456\u0440\u0443\u0448\u0456\u0441\u0456.',
-      ru: '\u041d\u0430\u0440\u043e\u0434\u043d\u044b\u0439 \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a \u041a\u0430\u0437\u0421\u0421\u0420 (1987), \u0430\u043a\u0442\u0440\u0438\u0441\u0430. \u0420\u043e\u0434\u0438\u043b\u0430\u0441\u044c \u0432 \u0410\u043b\u043c\u0430-\u0410\u0442\u0435. \u041e\u043a\u043e\u043d\u0447\u0438\u043b\u0430 \u041b\u0418\u0416\u0421\u0410 \u0438\u043c. \u0420\u0435\u043f\u0438\u043d\u0430 (1956). \u00ab\u041a\u0430\u0437\u0430\u0445\u0441\u043a\u0438\u0439 \u0432\u0430\u043b\u044c\u0441\u00bb \u2014 \u0436\u0435\u043c\u0447\u0443\u0436\u0438\u043d\u0430 \u043c\u0443\u0437\u0435\u044f \u0438\u043c. \u041a\u0430\u0441\u0442\u0435\u0435\u0432\u0430. 16 \u043b\u0435\u0442 \u2014 \u0433\u043b\u0430\u0432\u043d\u044b\u0439 \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a \u0442\u0435\u0430\u0442\u0440\u0430 \u0438\u043c. \u0410\u0431\u0430\u044f. \u0425\u0443\u0434\u043e\u0436\u043d\u0438\u043a-\u043f\u043e\u0441\u0442\u0430\u043d\u043e\u0432\u0449\u0438\u043a \u0444\u0438\u043b\u044c\u043c\u0430 \u00ab\u041a\u044b\u0437 \u0416\u0438\u0431\u0435\u043a\u00bb, \u043b\u0430\u0443\u0440\u0435\u0430\u0442 \u0412\u0441\u0435\u0441\u043e\u044e\u0437\u043d\u043e\u0433\u043e \u043a\u0438\u043d\u043e\u0444\u0435\u0441\u0442\u0438\u0432\u0430\u043b\u044f.',
-      en: "People's Artist of the Kazakh SSR (1987), actress and theatre designer. Born in Alma-Ata. Graduated from the Repin Institute in Leningrad (1956). Her Kazakh Waltz is the centrepiece of the Kasteev Museum. Chief designer of the Abai Opera Theatre for 16 years. Production designer of the film Kyz Zhibek.",
+      kz: 'ҚазКСР халық суретшісі (1987), актриса. «Қазақ вальсі» — «Кастеев» мұражайының бас туындысы. Абай атындағы опера театрының бас суретшісі (16 жыл). «Қыз Жібек» фильмінің безендірушісі.',
+      ru: 'Народный художник КазССР (1987), актриса. «Казахский вальс» — жемчужина музея им. Кастеева. 16 лет — главный художник театра оперы и балета им. Абая. Художник-постановщик фильма «Кыз Жибек».',
+      en: "People's Artist of the Kazakh SSR (1987), actress. Her 'Kazakh Waltz' is the centrepiece of the Kasteev Museum. For 16 years chief designer of the Abai Opera Theatre. Production designer of 'Kyz Zhibek'.",
     },
     thumb: 'assets/images/thumbs/ismailova_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/ismailova_kz.jpg', ru: 'assets/images/infographics/ismailova_ru.jpg', en: 'assets/images/infographics/ismailova_en.jpg' },
   },
   {
-    id: 'kasteev', years: '1904 \u2013 1973', color: '#4a6e9e',
-    name: { kz: '\u04d8\u0431\u0456\u043b\u0445\u0430\u043d \u049a\u0430\u0441\u0442\u0435\u0435\u0432', ru: '\u0410\u0431\u044b\u043b\u0445\u0430\u043d \u041a\u0430\u0441\u0442\u0435\u0435\u0432', en: 'Abylkhan Kasteev' },
+    id: 'kasteev', years: '1904 – 1973', color: '#4a6e9e',
+    name: { kz: 'Әбілхан Қастеев', ru: 'Абылхан Кастеев', en: 'Abylkhan Kasteev' },
     bio: {
-      kz: '\u049a\u0430\u0437\u0430\u049b \u043a\u04d9\u0441\u0456\u0431\u0438 \u043a\u0435\u0441\u043a\u0456\u043d\u0434\u0435\u043c\u0435\u0441\u0456\u043d\u0456\u04a3 \u043d\u0435\u0433\u0456\u0437\u0456\u043d \u049b\u0430\u043b\u0430\u0443\u0448\u044b, \u049a\u0430\u0437\u041a\u0421\u0420 \u0445\u0430\u043b\u044b\u049b \u0441\u0443\u0440\u0435\u0442\u0448\u0456\u0441\u0456 (1944). \u0416\u0430\u0440\u043a\u0435\u043d\u0442 \u043c\u0430\u04a3\u044b\u043d\u0434\u0430\u0493\u044b \u0428\u0438\u0436\u0456\u043d \u0430\u0443\u044b\u043b\u044b\u043d\u0434\u0430 \u0442\u0443\u044b\u043b\u0493\u0430\u043d. \u04e8\u0437\u0434\u0456\u0433\u0456\u043d\u0435\u043d \u0441\u0443\u0440\u0435\u0442\u0448\u0456 \u0431\u043e\u043b\u0493\u0430\u043d. 1100-\u0434\u0435\u043d \u0430\u0441\u0442\u0430\u043c \u0442\u0443\u044b\u043d\u0434\u044b \u0436\u0430\u0441\u0430\u0493\u0430\u043d. \u0410\u043b\u043c\u0430\u0442\u044b\u0434\u0430\u0493\u044b \u041c\u0435\u043c\u043b\u0435\u043a\u0435\u0442\u0442\u0456\u043a \u04e8\u043d\u0435\u0440 \u041c\u04b1\u0440\u0430\u0436\u0430\u0439\u044b \u043e\u043d\u044b\u04a3 \u0430\u0442\u044b\u043c\u0435\u043d \u0430\u0442\u0430\u043b\u0493\u0430\u043d.',
-      ru: '\u041e\u0441\u043d\u043e\u0432\u043e\u043f\u043e\u043b\u043e\u0436\u043d\u0438\u043a \u043a\u0430\u0437\u0430\u0445\u0441\u043a\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0435\u0441\u0441\u0438\u043e\u043d\u0430\u043b\u044c\u043d\u043e\u0433\u043e \u0438\u0437\u043e\u0431\u0440\u0430\u0437\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0433\u043e \u0438\u0441\u043a\u0443\u0441\u0441\u0442\u0432\u0430, \u043d\u0430\u0440\u043e\u0434\u043d\u044b\u0439 \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a \u041a\u0430\u0437\u0421\u0421\u0420 (1944). \u0420\u043e\u0434\u0438\u043b\u0441\u044f \u0432 \u0430\u0443\u043b\u0435 \u0427\u0438\u0436\u0438\u043d \u0431\u043b\u0438\u0437 \u0416\u0430\u0440\u043a\u0435\u043d\u0442\u0430. \u0421\u0430\u043c\u043e\u0443\u0447\u043a\u0430: \u0441\u0442\u0443\u0434\u0438\u044f \u041d. \u0425\u043b\u0443\u0434\u043e\u0432\u0430 (1929\u201331) \u0438 \u0441\u0442\u0443\u0434\u0438\u044f \u0438\u043c. \u041a\u0440\u0443\u043f\u0441\u043a\u043e\u0439 \u0432 \u041c\u043e\u0441\u043a\u0432\u0435 (1934\u201337). \u0421\u043e\u0437\u0434\u0430\u043b \u0441\u0432\u044b\u0448\u0435 1100 \u043f\u0440\u043e\u0438\u0437\u0432\u0435\u0434\u0435\u043d\u0438\u0439. \u0418\u043c\u0435\u043d\u0435\u043c \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a\u0430 \u043d\u0430\u0437\u0432\u0430\u043d \u0413\u043e\u0441\u0443\u0434\u0430\u0440\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u043c\u0443\u0437\u0435\u0439 \u0438\u0441\u043a\u0443\u0441\u0441\u0442\u0432 \u0432 \u0410\u043b\u043c\u0430\u0442\u044b.',
-      en: "Pioneer of Kazakh professional fine art, People's Artist of the Kazakh SSR (1944). Born in the Chizhin aul near Zharkent. Self-taught: studied under N. Khludov (1929-31) and at the Krupskaya Studio in Moscow (1934-37). Created over 1,100 works. The State Museum of Arts in Almaty bears his name.",
+      kz: 'Қазақ кәсіби кескіндемесінің негізін қалаушы, ҚазКСР халық суретшісі (1944). 1100-ден астам туынды жасаған. Алматыдағы мемлекеттік өнер мұражайы оның атымен аталған.',
+      ru: 'Основоположник казахского профессионального изобразительного искусства, народный художник КазССР (1944). Создал свыше 1100 произведений. Именем художника назван Государственный музей искусств в Алматы.',
+      en: "Pioneer of Kazakh professional fine art, People's Artist of the Kazakh SSR (1944). Created over 1,100 works. The State Museum of Arts in Almaty bears his name.",
     },
     thumb: 'assets/images/thumbs/kasteev_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/kasteev_kz.jpg', ru: 'assets/images/infographics/kasteev_ru.jpg', en: 'assets/images/infographics/kasteev_en.jpg' },
   },
 ];
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
-var S = { artists: [], lang: 'ru', current: 0, autoTimer: null, view: 'slider', activeArtist: null };
-var D = {};  // DOM refs
+// ============================================================
+// СОСТОЯНИЕ
+// ============================================================
+var S = {
+  artists:      [],
+  lang:         'ru',
+  current:      0,
+  autoTimer:    null,
+  view:         'slider',
+  activeArtist: null,
+};
 
-// ─── LOAD DATA ───────────────────────────────────────────────────────────────
+// DOM-ссылки (заполняются в init)
+var D = {};
+
+// ============================================================
+// ЗАГРУЗКА ДАННЫХ
+// ============================================================
 async function loadArtists() {
   try {
     var res = await fetch('data/artists.json');
@@ -112,15 +123,18 @@ async function loadArtists() {
     if (Array.isArray(data.artists) && data.artists.length) return data.artists;
     throw new Error('empty');
   } catch (e) {
-    console.warn('Using built-in data:', e.message);
-    return ARTISTS;
+    console.warn('Fallback to built-in data:', e.message);
+    return ARTISTS_FALLBACK;
   }
 }
 
-// ─── SLIDER ──────────────────────────────────────────────────────────────────
+// ============================================================
+// СЛАЙДЕР
+// ============================================================
 function buildSlider() {
   D.track.innerHTML = '';
   D.dots.innerHTML  = '';
+
   S.artists.forEach(function(artist, i) {
     var card = document.createElement('div');
     card.className = 'artist-card';
@@ -136,7 +150,8 @@ function buildSlider() {
         '<div class="card-name">' + (artist.name[S.lang] || artist.name.en) + '</div>' +
         '<div class="card-enter-btn"><span class="explore-lbl">' + LANG[S.lang].explore + '</span><span class="arrow-icon"></span></div>' +
       '</div>';
-    card.addEventListener('click', function() { goTo(i); showBio(); });
+
+    card.addEventListener('click', function() { onCardClick(i); });
     D.track.appendChild(card);
 
     var dot = document.createElement('button');
@@ -160,60 +175,94 @@ function goTo(idx) {
   var len = S.artists.length;
   S.current = ((idx % len) + len) % len;
   D.track.style.transform = 'translateX(-' + (S.current * 100) + '%)';
-  D.dots.querySelectorAll('.dot').forEach(function(d, i) { d.classList.toggle('active', i === S.current); });
+  D.dots.querySelectorAll('.dot').forEach(function(d, i) {
+    d.classList.toggle('active', i === S.current);
+  });
   S.activeArtist = S.artists[S.current];
   refreshBio();
 }
+
 function next() { goTo(S.current + 1); }
 function prev() { goTo(S.current - 1); }
-function startAuto() { stopAuto(); S.autoTimer = setInterval(next, 10000); }
-function stopAuto()  { if (S.autoTimer) { clearInterval(S.autoTimer); S.autoTimer = null; } }
+
+function startAuto() {
+  stopAuto();
+  S.autoTimer = setInterval(next, 10000);
+}
+function stopAuto() {
+  if (S.autoTimer) { clearInterval(S.autoTimer); S.autoTimer = null; }
+}
 
 function initSwipe() {
-  var el = D.trackWrap, startX = 0;
-  el.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; stopAuto(); }, { passive: true });
-  el.addEventListener('touchend',   function(e) {
+  var el = D.trackWrap;
+  var startX = 0;
+  el.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    stopAuto();
+  }, { passive: true });
+  el.addEventListener('touchend', function(e) {
     var dx = e.changedTouches[0].clientX - startX;
     if (Math.abs(dx) > 50) { dx > 0 ? prev() : next(); }
     startAuto();
   }, { passive: true });
 }
 
-// ─── BIO PANEL ───────────────────────────────────────────────────────────────
+// ============================================================
+// BIO ПАНЕЛЬ
+// ============================================================
 function refreshBio() {
-  var a = S.activeArtist;
-  if (!a) return;
-  D.bioName.textContent  = a.name[S.lang]  || a.name.en  || '';
-  D.bioYears.textContent = a.years || '';
-  D.bioText.textContent  = a.bio[S.lang]   || a.bio.en   || '';
+  var artist = S.activeArtist;
+  if (!artist) return;
+  D.bioName.textContent  = artist.name[S.lang]  || artist.name.en  || '';
+  D.bioYears.textContent = artist.years || '';
+  D.bioText.textContent  = artist.bio[S.lang]   || artist.bio.en   || '';
 }
-function showBio()  { D.bioPanel.classList.add('visible'); }
-function hideBio()  { D.bioPanel.classList.remove('visible'); }
 
-// ─── LANGUAGE ─────────────────────────────────────────────────────────────────
+function showBio() { D.bioPanel.classList.add('visible'); }
+function hideBio() { D.bioPanel.classList.remove('visible'); }
+
+function onCardClick(i) {
+  goTo(i);
+  showBio();
+}
+
+// ============================================================
+// ЯЗЫК
+// ============================================================
 function setLang(lang) {
   S.lang = lang;
-  D.langBtns.forEach(function(btn) { btn.classList.toggle('active', btn.dataset.lang === lang); });
+  D.langBtns.forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
   if (D.bioEnterBtn) D.bioEnterBtn.textContent = LANG[lang].enterRoom;
   if (D.bioLabel)    D.bioLabel.textContent    = LANG[lang].bio;
-  if (D.gyroHint)    D.gyroHint.innerHTML      = LANG[lang].dragHint;
+  if (D.gyroHint)    D.gyroHint.textContent    = LANG[lang].dragHint;
   if (D.roomBackBtn) D.roomBackBtn.textContent = LANG[lang].back;
-  // Update section eyebrow and title
+
+  // Заголовок галереи
   var eyebrow = document.querySelector('.section-eyebrow');
   if (eyebrow) eyebrow.textContent = LANG[lang].eyebrow;
   var titleEl = document.querySelector('.section-title');
   if (titleEl) titleEl.textContent = LANG[lang].title;
-  // Update room label if in room
+
+  // Метка в зале
   if (S.activeArtist && D.roomLabelName) {
     D.roomLabelName.textContent  = S.activeArtist.name[lang] || S.activeArtist.name.en;
     D.roomLabelYears.textContent = S.activeArtist.years;
   }
+
   updateCardText();
   refreshBio();
-  if (S.view === 'room' && S.activeArtist && threeCtx) buildRoom(S.activeArtist);
+
+  // Перестраиваем зал если открыт (обновляет инфографику на нужном языке)
+  if (S.view === 'room' && S.activeArtist && threeCtx) {
+    buildRoom(S.activeArtist);
+  }
 }
 
-// ─── VIEW SWITCH ──────────────────────────────────────────────────────────────
+// ============================================================
+// ПЕРЕКЛЮЧЕНИЕ ВИДОВ
+// ============================================================
 function showView(name) {
   S.view = name;
   D.sliderView.classList.toggle('hidden', name !== 'slider');
@@ -222,7 +271,8 @@ function showView(name) {
 
 function enterRoom(artist) {
   S.activeArtist = artist;
-  hideBio(); stopAuto();
+  hideBio();
+  stopAuto();
   D.roomLabelName.textContent  = artist.name[S.lang] || artist.name.en;
   D.roomLabelYears.textContent = artist.years;
   D.gyroHint.classList.remove('fade');
@@ -237,11 +287,14 @@ function goBack() {
   startAuto();
 }
 
-// ─── THREE.JS ROOM ────────────────────────────────────────────────────────────
+// ============================================================
+// 3D ЗАЛ — Three.js
+// ============================================================
 var threeCtx = null;
 
 function buildRoom(artist) {
   destroyRoom();
+
   var container = D.roomContainer;
   var W = container.clientWidth  || window.innerWidth;
   var H = container.clientHeight || window.innerHeight;
@@ -253,18 +306,24 @@ function buildRoom(artist) {
   renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
-  var scene  = new THREE.Scene();
+  var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1510);
-  scene.fog        = new THREE.Fog(0x1a1510, 8, 20);
+  scene.fog = new THREE.Fog(0x1a1510, 8, 20);
 
   var camera = new THREE.PerspectiveCamera(65, W / H, 0.1, 50);
   camera.position.set(0, 1.62, 0);
 
+  // Свет
   scene.add(new THREE.AmbientLight(0xfff5e0, 0.55));
   var dir = new THREE.DirectionalLight(0xffe8c0, 1.3);
-  dir.position.set(2, 5, 3); dir.castShadow = true; scene.add(dir);
-  scene.add(Object.assign(new THREE.PointLight(0xd4a853, 0.9, 8), { position: new THREE.Vector3(0, 3.5, 0) }));
+  dir.position.set(2, 5, 3);
+  dir.castShadow = true;
+  scene.add(dir);
+  var pt = new THREE.PointLight(0xd4a853, 0.9, 8);
+  pt.position.set(0, 3.5, 0);
+  scene.add(pt);
 
+  // Материалы
   var mFloor = new THREE.MeshLambertMaterial({ color: 0x3d2f1e });
   var mWall  = new THREE.MeshLambertMaterial({ color: 0x2a2018 });
   var mCeil  = new THREE.MeshLambertMaterial({ color: 0x1e1a12 });
@@ -273,72 +332,103 @@ function buildRoom(artist) {
   var mDark  = new THREE.MeshLambertMaterial({ color: 0x1a1410 });
 
   var rW = 7, rH = 4.5, rD = 8;
+
   function box(w, h, d, x, y, z, mat, shadow) {
     var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     m.position.set(x, y, z);
     if (shadow) m.receiveShadow = true;
     m.castShadow = true;
-    scene.add(m); return m;
+    scene.add(m);
+    return m;
   }
 
+  // Комната
   box(rW, 0.05, rD,  0, 0,    0,      mFloor, true);
   box(rW, 0.05, rD,  0, rH,   0,      mCeil);
   box(rW, rH,   0.1, 0, rH/2, -rD/2,  mWall);
   box(rW, rH,   0.1, 0, rH/2,  rD/2,  mWall);
   box(0.1, rH,  rD, -rW/2, rH/2, 0,   mWall);
   box(0.1, rH,  rD,  rW/2, rH/2, 0,   mWall);
-  box(rW, 0.06, 0.06, 0, 0.03,    -rD/2+0.05, mMold);
-  box(rW, 0.06, 0.06, 0, rH-0.03, -rD/2+0.05, mMold);
 
-  var fw = 4.15, fh = 2.75, fz = -rD/2+0.11, ft = 0.12;
+  // Молдинги
+  box(rW, 0.06, 0.06, 0, 0.03,    -rD/2 + 0.05, mMold);
+  box(rW, 0.06, 0.06, 0, rH-0.03, -rD/2 + 0.05, mMold);
+
+  // Рамка под картину
+  var fw = 4.15, fh = 2.75, fz = -rD/2 + 0.11, ft = 0.12;
   box(fw, ft, ft,  0,    fh/2,  fz, mFrame);
   box(fw, ft, ft,  0,   -fh/2,  fz, mFrame);
   box(ft, fh, ft, -fw/2, 0,     fz, mFrame);
   box(ft, fh, ft,  fw/2, 0,     fz, mFrame);
 
-  var infPath = artist.infographic && artist.infographic[S.lang] ? artist.infographic[S.lang] : null;
+  // Инфографика или цветная заглушка
+  var infPath = artist.infographic && artist.infographic[S.lang]
+    ? artist.infographic[S.lang] : null;
+
   if (infPath) {
-    new THREE.TextureLoader().load(infPath,
+    new THREE.TextureLoader().load(
+      infPath,
       function(tex) {
-        var m = new THREE.Mesh(new THREE.BoxGeometry(4, 2.6, 0.01), new THREE.MeshLambertMaterial({ map: tex }));
-        m.position.set(0, 2.2, -rD/2+0.12); scene.add(m);
+        var m = new THREE.Mesh(
+          new THREE.BoxGeometry(4, 2.6, 0.01),
+          new THREE.MeshLambertMaterial({ map: tex })
+        );
+        m.position.set(0, 2.2, -rD/2 + 0.12);
+        scene.add(m);
       },
       undefined,
-      function() { addFallback(); }
+      function() { fallbackPanel(); }
     );
-  } else { addFallback(); }
-
-  function addFallback() {
-    box(4, 2.6, 0.01, 0, 2.2, -rD/2+0.12, new THREE.MeshLambertMaterial({ color: new THREE.Color(artist.color || '#c4843a') }));
+  } else {
+    fallbackPanel();
   }
 
+  function fallbackPanel() {
+    box(4, 2.6, 0.01, 0, 2.2, -rD/2 + 0.12,
+      new THREE.MeshLambertMaterial({ color: new THREE.Color(artist.color || '#c4843a') }));
+  }
+
+  // Полки и книги
   box(0.05, 0.04, 1.2, -rW/2+0.79, 2.0, -1.5, mMold);
   box(0.05, 0.04, 1.2, -rW/2+0.79, 1.3, -1.5, mMold);
   var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080];
   for (var bi = 0; bi < 5; bi++) {
-    var bw = 0.06 + bi * 0.008, bh = 0.22 + bi * 0.02;
-    box(bw, bh, 0.18, -rW/2+0.38+bi*0.13, 2.0+bh/2, -1.5, new THREE.MeshLambertMaterial({ color: bColors[bi] }));
-    box(bw, bh, 0.18, -rW/2+0.38+bi*0.13, 1.3+bh/2, -1.5, new THREE.MeshLambertMaterial({ color: bColors[(bi+2)%5] }));
+    var bw = 0.06 + (bi * 0.008), bh = 0.22 + (bi * 0.02);
+    box(bw, bh, 0.18, -rW/2+0.38+(bi*0.13), 2.0+bh/2, -1.5,
+      new THREE.MeshLambertMaterial({ color: bColors[bi] }));
+    box(bw, bh, 0.18, -rW/2+0.38+(bi*0.13), 1.3+bh/2, -1.5,
+      new THREE.MeshLambertMaterial({ color: bColors[(bi+2)%5] }));
   }
-  box(0.4, 0.9, 0.4, 2.5, 0.45, -2.5, mDark, true);
-  var sphere = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshLambertMaterial({ color: new THREE.Color(artist.color || '#c4843a') }));
-  sphere.position.set(2.5, 1.08, -2.5); scene.add(sphere);
 
-  var orbit   = createOrbit(camera, renderer.domElement);
-  var onResize = function() {
+  // Пьедестал со сферой
+  box(0.4, 0.9, 0.4, 2.5, 0.45, -2.5, mDark, true);
+  var sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 16, 16),
+    new THREE.MeshLambertMaterial({ color: new THREE.Color(artist.color || '#c4843a') })
+  );
+  sphere.position.set(2.5, 1.08, -2.5);
+  scene.add(sphere);
+
+  // Orbit controls (Street View style)
+  var orbit = createOrbit(camera, renderer.domElement);
+
+  function onResize() {
     var w = container.clientWidth || window.innerWidth;
     var h = container.clientHeight || window.innerHeight;
-    camera.aspect = w / h; camera.updateProjectionMatrix();
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
     renderer.setSize(w, h);
-  };
+  }
   window.addEventListener('resize', onResize);
+
   threeCtx = { renderer: renderer, animId: null, onResize: onResize, orbit: orbit };
 
-  (function animate() {
+  function animate() {
     threeCtx.animId = requestAnimationFrame(animate);
     orbit.update();
     renderer.render(scene, camera);
-  })();
+  }
+  animate();
 }
 
 function destroyRoom() {
@@ -352,76 +442,144 @@ function destroyRoom() {
   threeCtx = null;
 }
 
-// ─── ORBIT + QUATERNION GYRO ──────────────────────────────────────────────────
+// ============================================================
+// ORBIT + QUATERNION GYRO CONTROLS
+// Google Street View style: drag look-around + pinch zoom + gyroscope
+// ============================================================
 function createOrbit(camera, canvas) {
-  var FOV_DEF = 65, FOV_MIN = 20, FOV_MAX = 65;
-  var SENS = 0.010, DAMP = 0.82;
 
-  var fov = FOV_DEF;
-  var vX = 0, vY = 0;
-  var dragOffX = 0, dragOffY = 0;
+  var FOV_DEF = 65;    // начальный FOV
+  var FOV_MIN = 20;    // максимальный зум (~3x)
+  var FOV_MAX = 65;
+  var SENS    = 0.010; // чувствительность drag
+  var DAMP    = 0.82;  // затухание инерции
+
+  // --- Состояние ---
+  var fov      = FOV_DEF;
+  var vX = 0, vY = 0;       // инерция drag
+  var dragOffX = 0;          // смещение от drag поверх гиро (радианы)
+  var dragOffY = 0;
   var lastX = 0, lastY = 0;
-  var isDown = false, isTouching = false, isPinch = false, lastPinch = 0;
+  var isDown     = false;
+  var isTouching = false;
+  var isPinch    = false;
+  var lastPinch  = 0;
 
-  var Q     = new THREE.Quaternion();
-  var QGyro = new THREE.Quaternion();
+  // Кватернионы
+  var Q     = new THREE.Quaternion();  // итоговая ориентация
+  var QGyro = new THREE.Quaternion();  // от гироскопа
+  var QDrag = new THREE.Quaternion();  // смещение от drag
+  var QBase = new THREE.Quaternion();  // базовая ориентация при захвате drag
+
+  // Для конвертации DeviceOrientation → кватернион (алгоритм DeviceOrientationControls THREE.js r128)
   var zee   = new THREE.Vector3(0, 0, 1);
   var euler = new THREE.Euler();
   var q0    = new THREE.Quaternion();
   var q1    = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
 
-  var gyroActive = false, hasGyro = false;
-  var fallTheta  = 0, fallPhi = Math.PI / 2;
-  var listeners  = [];
+  var gyroActive = false;
+  var hasGyro    = false;
 
-  function on(el, type, fn, opt) { el.addEventListener(type, fn, opt); listeners.push([el, type, fn, opt]); }
+  // Начальный взгляд вперёд (без гироскопа)
+  var fallTheta = 0;
+  var fallPhi   = Math.PI / 2;
 
+  var listeners = [];
+  function on(el, type, fn, opt) {
+    el.addEventListener(type, fn, opt);
+    listeners.push([el, type, fn, opt]);
+  }
+
+  // ── PINCH DISTANCE ──────────────────────────────────────────
   function getPinchDist(e) {
     var dx = e.touches[0].clientX - e.touches[1].clientX;
     var dy = e.touches[0].clientY - e.touches[1].clientY;
     return Math.sqrt(dx*dx + dy*dy);
   }
 
+  // ── TOUCH START ──────────────────────────────────────────────
   on(canvas, 'touchstart', function(e) {
     e.preventDefault();
-    if (e.touches.length === 2) { isPinch = true; isDown = false; isTouching = true; lastPinch = getPinchDist(e); return; }
+    if (e.touches.length === 2) {
+      isPinch    = true;
+      isDown     = false;
+      isTouching = true;
+      lastPinch  = getPinchDist(e);
+      return;
+    }
     if (e.touches.length === 1) {
-      isPinch = false; isDown = true; isTouching = true;
-      lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+      isPinch    = false;
+      isDown     = true;
+      isTouching = true;
+      lastX      = e.touches[0].clientX;
+      lastY      = e.touches[0].clientY;
       vX = 0; vY = 0;
+      QBase.copy(Q);
+      QDrag.identity();
     }
   }, { passive: false });
 
+  // ── TOUCH MOVE ───────────────────────────────────────────────
   on(canvas, 'touchmove', function(e) {
     e.preventDefault();
+
+    // PINCH-ZOOM
     if (e.touches.length === 2) {
       isPinch = true; isDown = false;
-      var d = getPinchDist(e), delta = lastPinch - d;
-      fov = Math.max(FOV_MIN, Math.min(FOV_MAX, fov + delta * 0.15));
-      camera.fov = fov; camera.updateProjectionMatrix();
-      lastPinch = d; return;
+      var d     = getPinchDist(e);
+      var delta = lastPinch - d;  // >0 = zoom out
+      fov     = Math.max(FOV_MIN, Math.min(FOV_MAX, fov + delta * 0.15));
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+      lastPinch = d;
+      return;
     }
+
+    // DRAG (1 палец)
     if (!isDown || isPinch) return;
-    var dx = e.touches[0].clientX - lastX, dy = e.touches[0].clientY - lastY;
-    vX = dx * SENS; vY = dy * SENS;
+    var dx = e.touches[0].clientX - lastX;
+    var dy = e.touches[0].clientY - lastY;
+
+    vX = dx * SENS;
+    vY = dy * SENS;
+
     if (gyroActive) {
       dragOffX -= dx * SENS;
-      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY + dy * SENS));
+      dragOffY += dy * SENS;
+      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY));
     } else {
       fallTheta -= dx * SENS;
       fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + dy * SENS));
     }
-    lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
   }, { passive: false });
 
-  on(canvas, 'touchend',    function() { isPinch = false; isDown = false; isTouching = false; }, { passive: true });
-  on(canvas, 'touchcancel', function() { isPinch = false; isDown = false; isTouching = false; vX = 0; vY = 0; }, { passive: true });
+  // ── TOUCH END ────────────────────────────────────────────────
+  on(canvas, 'touchend', function() {
+    isPinch    = false;
+    isDown     = false;
+    isTouching = false;
+  }, { passive: true });
 
-  on(canvas, 'mousedown', function(e) { isDown = true; lastX = e.clientX; lastY = e.clientY; vX = 0; vY = 0; canvas.style.cursor = 'grabbing'; });
+  on(canvas, 'touchcancel', function() {
+    isPinch = false; isDown = false; isTouching = false;
+    vX = 0; vY = 0;
+  }, { passive: true });
+
+  // ── MOUSE (десктоп) ──────────────────────────────────────────
+  on(canvas, 'mousedown', function(e) {
+    isDown = true;
+    lastX  = e.clientX; lastY = e.clientY;
+    vX = 0; vY = 0;
+    canvas.style.cursor = 'grabbing';
+  });
   on(canvas, 'wheel', function(e) {
     e.preventDefault();
     fov = Math.max(FOV_MIN, Math.min(FOV_MAX, fov + e.deltaY * 0.05));
-    camera.fov = fov; camera.updateProjectionMatrix();
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
   }, { passive: false });
 
   var onMM = function(e) {
@@ -437,126 +595,176 @@ function createOrbit(camera, canvas) {
     }
     lastX = e.clientX; lastY = e.clientY;
   };
+  var onMU = function() { isDown = false; canvas.style.cursor = 'grab'; };
   on(document, 'mousemove', onMM);
-  on(document, 'mouseup',   function() { isDown = false; canvas.style.cursor = 'grab'; });
+  on(document, 'mouseup',   onMU);
+
   canvas.style.cursor = 'grab';
 
+  // ── ГИРОСКОП — кватернионный ─────────────────────────────────
+  // Точная копия алгоритма из DeviceOrientationControls three.js r128
   var onOrient = function(e) {
     if (!hasGyro || e.alpha == null) return;
-    var alpha  = THREE.MathUtils.degToRad(e.alpha  || 0);
-    var beta   = THREE.MathUtils.degToRad(e.beta   || 0);
-    var gamma  = THREE.MathUtils.degToRad(e.gamma  || 0);
-    var orient = THREE.MathUtils.degToRad(window.screen && window.screen.orientation ? (window.screen.orientation.angle || 0) : 0);
+
+    var alpha  = e.alpha  ? THREE.MathUtils.degToRad(e.alpha)  : 0;
+    var beta   = e.beta   ? THREE.MathUtils.degToRad(e.beta)   : 0;
+    var gamma  = e.gamma  ? THREE.MathUtils.degToRad(e.gamma)  : 0;
+    var orient = window.screen && window.screen.orientation && window.screen.orientation.angle
+                 ? THREE.MathUtils.degToRad(window.screen.orientation.angle) : 0;
+
     euler.set(beta, alpha, -gamma, 'YXZ');
     QGyro.setFromEuler(euler);
     QGyro.multiply(q1);
     q0.setFromAxisAngle(zee, -orient);
     QGyro.multiply(q0);
+
     gyroActive = true;
   };
   on(window, 'deviceorientation', onOrient);
 
-  if (typeof DeviceOrientationEvent !== 'undefined') {
+  // iOS 13+ — запрашиваем разрешение при первом тапе
+  function tryEnableGyro() {
+    if (typeof DeviceOrientationEvent === 'undefined') return;
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
       on(canvas, 'touchend', function askPerm() {
-        DeviceOrientationEvent.requestPermission().then(function(r) { if (r === 'granted') hasGyro = true; }).catch(function() {});
+        DeviceOrientationEvent.requestPermission()
+          .then(function(r) { if (r === 'granted') hasGyro = true; })
+          .catch(function() {});
         canvas.removeEventListener('touchend', askPerm);
       }, { passive: true });
-    } else { hasGyro = true; }
+    } else {
+      hasGyro = true;
+    }
   }
+  tryEnableGyro();
 
+  // ── UPDATE (каждый кадр) ─────────────────────────────────────
   return {
     update: function() {
+
       if (gyroActive && hasGyro) {
-        var qH = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dragOffX);
-        var qV = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dragOffY);
+        // ── РЕЖИМ ГИРОСКОПА ──
+        var qH = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0), dragOffX);
+        var qV = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(1, 0, 0), dragOffY);
         Q.copy(QGyro).multiply(qH).multiply(qV);
+
         if (!isDown) {
           dragOffX -= vX * 0.3; vX *= DAMP;
-          dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY + vY * 0.3)); vY *= DAMP;
+          dragOffY += vY * 0.3; vY *= DAMP;
+          dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY));
           if (Math.abs(vX) < 0.0001) vX = 0;
           if (Math.abs(vY) < 0.0001) vY = 0;
         }
+
         camera.position.set(0, 1.62, 0);
         camera.quaternion.copy(Q);
+
       } else {
+        // ── РЕЖИМ БЕЗ ГИРОСКОПА (drag look-around, как Google Street View) ──
         if (!isDown) {
           fallTheta -= vX; vX *= DAMP;
-          fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + vY)); vY *= DAMP;
+          fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + vY));
+          vY *= DAMP;
           if (Math.abs(vX) < 0.0001) vX = 0;
           if (Math.abs(vY) < 0.0001) vY = 0;
         }
-        var R = 3.0, sp = Math.sin(fallPhi), cp = Math.cos(fallPhi), st = Math.sin(fallTheta), ct = Math.cos(fallTheta);
+        var R  = 3.0;
+        var sp = Math.sin(fallPhi), cp = Math.cos(fallPhi);
+        var st = Math.sin(fallTheta), ct = Math.cos(fallTheta);
         camera.position.set(0, 1.62, 0);
         camera.lookAt(sp * st * R, 1.62 + cp * R * 0.5, -sp * ct * R);
       }
     },
+
     destroy: function() {
       listeners.forEach(function(l) { l[0].removeEventListener(l[1], l[2], l[3]); });
-      listeners = []; canvas.style.cursor = '';
+      listeners = [];
+      canvas.style.cursor = '';
     },
   };
 }
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================
 async function init() {
-  D.loader        = document.getElementById('loader');
-  D.sliderView    = document.getElementById('slider-view');
-  D.roomView      = document.getElementById('room-view');
-  D.track         = document.getElementById('slider-track');
-  D.trackWrap     = document.getElementById('slider-track-wrapper');
-  D.dots          = document.getElementById('slider-dots');
-  D.prevBtn       = document.getElementById('prev-arrow');
-  D.nextBtn       = document.getElementById('next-arrow');
-  D.bioPanel      = document.getElementById('bio-panel');
-  D.bioName       = document.getElementById('bio-name');
-  D.bioYears      = document.getElementById('bio-years');
-  D.bioText       = document.getElementById('bio-text');
-  D.bioEnterBtn   = document.getElementById('bio-enter-btn');
-  D.bioLabel      = document.getElementById('bio-label');
-  D.roomContainer = document.getElementById('aframe-container');
+  D.loader         = document.getElementById('loader');
+  D.sliderView     = document.getElementById('slider-view');
+  D.roomView       = document.getElementById('room-view');
+  D.track          = document.getElementById('slider-track');
+  D.trackWrap      = document.getElementById('slider-track-wrapper');
+  D.dots           = document.getElementById('slider-dots');
+  D.prevBtn        = document.getElementById('prev-arrow');
+  D.nextBtn        = document.getElementById('next-arrow');
+  D.bioPanel       = document.getElementById('bio-panel');
+  D.bioName        = document.getElementById('bio-name');
+  D.bioYears       = document.getElementById('bio-years');
+  D.bioText        = document.getElementById('bio-text');
+  D.bioEnterBtn    = document.getElementById('bio-enter-btn');
+  D.bioLabel       = document.getElementById('bio-label');
+  D.roomContainer  = document.getElementById('aframe-container');
   D.roomLabelName  = document.getElementById('room-label-name');
   D.roomLabelYears = document.getElementById('room-label-years');
-  D.gyroHint      = document.getElementById('gyro-hint');
-  D.langBtns      = document.querySelectorAll('.lang-btn');
-  D.roomBackBtn   = document.getElementById('room-back-btn');
+  D.gyroHint       = document.getElementById('gyro-hint');
+  D.langBtns       = document.querySelectorAll('.lang-btn');
+  D.roomBackBtn    = document.getElementById('room-back-btn');
 
+  // Проверяем критичные элементы
   var missing = ['track','trackWrap','dots','bioPanel','roomContainer'].filter(function(k) { return !D[k]; });
   if (missing.length) {
-    console.error('Missing DOM:', missing);
+    console.error('Missing DOM elements:', missing);
     if (D.loader) D.loader.innerHTML = '<div style="color:#c44;padding:20px;text-align:center">DOM error: ' + missing.join(', ') + '</div>';
     return;
   }
 
+  // Загружаем данные
   S.artists = await loadArtists();
-  S.lang    = 'ru';
-  S.current = 0;
-  S.activeArtist = S.artists[0];
 
+  // Строим слайдер
   buildSlider();
   initSwipe();
-  D.langBtns.forEach(function(btn) { btn.classList.toggle('active', btn.dataset.lang === 'ru'); });
-  D.track.style.transform = 'translateX(0%)';
-  // Apply initial language strings
-  setLang('ru');
-  startAuto();
 
+  // Начальный язык и состояние
+  S.lang         = 'ru';
+  S.current      = 0;
+  S.activeArtist = S.artists[0];
+  D.track.style.transform = 'translateX(0%)';
+
+  // Применяем переводы
+  setLang('ru');
+
+  // События кнопок
   if (D.prevBtn)    D.prevBtn.addEventListener('click',    function() { prev(); stopAuto(); startAuto(); });
   if (D.nextBtn)    D.nextBtn.addEventListener('click',    function() { next(); stopAuto(); startAuto(); });
   if (D.roomBackBtn) D.roomBackBtn.addEventListener('click', goBack);
 
-  if (D.bioEnterBtn) D.bioEnterBtn.addEventListener('click', function() {
-    if (S.activeArtist) enterRoom(S.activeArtist);
-  });
-  D.langBtns.forEach(function(btn) { btn.addEventListener('click', function() { setLang(btn.dataset.lang); }); });
+  if (D.bioEnterBtn) {
+    D.bioEnterBtn.addEventListener('click', function() {
+      if (S.activeArtist) enterRoom(S.activeArtist);
+    });
+  }
 
-  setTimeout(function() { if (D.loader) D.loader.classList.add('hidden'); }, 400);
+  D.langBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() { setLang(btn.dataset.lang); });
+  });
+
+  // Автопрокрутка
+  startAuto();
+
+  // Скрываем лоадер
+  setTimeout(function() {
+    if (D.loader) D.loader.classList.add('hidden');
+  }, 400);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
   init().catch(function(err) {
-    console.error('Init failed:', err);
+    console.error('Museum init failed:', err);
     var loader = document.getElementById('loader');
-    if (loader) loader.innerHTML = '<div style="color:#c44;font-family:sans-serif;padding:20px;text-align:center">Error: ' + err.message + '</div>';
+    if (loader) loader.innerHTML =
+      '<div style="color:#c44;font-family:sans-serif;padding:20px;text-align:center">' +
+      'Ошибка инициализации<br><small>' + err.message + '</small></div>';
   });
 });
