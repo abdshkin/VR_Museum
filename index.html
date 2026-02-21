@@ -1,205 +1,58 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artists 3D Multi Lang</title>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
-
-<style>
-body{
-  margin:0;
-  background:#111;
-  color:white;
-  font-family:sans-serif;
-}
-
-.lang-switch{
-  position:fixed;
-  top:20px;
-  right:20px;
-  z-index:999;
-}
-
-.lang-switch button{
-  margin:0 5px;
-  padding:6px 12px;
-  background:#222;
-  color:white;
-  border:1px solid #444;
-  cursor:pointer;
-}
-
-section{
-  padding:80px 20px 40px;
-}
-
-.canvas-container{
-  width:100%;
-  height:300px;
-}
-
-@media(min-width:769px){
-  .swiper-wrapper{
-    display:grid!important;
-    grid-template-columns:repeat(3,1fr);
-    gap:20px;
-  }
-}
-</style>
+  <title>Виртуальный Музей Казахстанских Художников</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-orbit-controls@1.3.2/dist/aframe-orbit-controls.min.js"></script>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div class="lang-switch">
-  <button data-lang="ru">RU</button>
-  <button data-lang="kz">KZ</button>
-  <button data-lang="en">EN</button>
-</div>
-
-<section>
-  <h2 data-i18n="artist1">Художник 1</h2>
-  <div class="artist-slider swiper">
-    <div class="swiper-wrapper">
-      <div class="swiper-slide">
-        <div class="canvas-container" 
-             data-model-ru="models/ru_model.glb"
-             data-model-kz="models/kz_model.glb"
-             data-model-en="models/en_model.glb">
-        </div>
+  <!-- Главный слайдер художников -->
+  <div id="artist-slider" class="slider-container">
+    <button class="nav-btn prev" onclick="prevArtist()">‹</button>
+    <div id="slider-track" class="slider-track">
+      <div class="artist-card" data-room="telzhanov" onclick="enterRoom('telzhanov')">
+        <img src="telzhanov_thumb.jpg" alt="Тельжанов">
+        <h3>Тельжанов</h3>
+      </div>
+      <div class="artist-card" data-room="galimbaeva" onclick="enterRoom('galimbaeva')">
+        <img src="galimbaeva_thumb.jpg" alt="Галимбаева">
+        <h3>Галимбаева</h3>
+      </div>
+      <div class="artist-card" data-room="mullashev" onclick="enterRoom('mullashev')">
+        <img src="mullashev_thumb.jpg" alt="Муллашев">
+        <h3>Муллашев</h3>
+      </div>
+      <div class="artist-card" data-room="ismailova" onclick="enterRoom('ismailova')">
+        <img src="ismailova_thumb.jpg" alt="Исмаилова">
+        <h3>Исмаилова</h3>
+      </div>
+      <div class="artist-card" data-room="kasteev" onclick="enterRoom('kasteev')">
+        <img src="kasteev_thumb.jpg" alt="Кастеев">
+        <h3>Кастеев</h3>
       </div>
     </div>
+    <button class="nav-btn next" onclick="nextArtist()">›</button>
   </div>
-</section>
 
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r155/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.155/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.155/examples/js/controls/OrbitControls.js"></script>
+  <!-- Тулбар языка -->
+  <div id="lang-toolbar" class="toolbar">
+    <button onclick="setLanguage('kz')">🇰🇿 Қаз</button>
+    <button onclick="setLanguage('ru')">🇷🇺 Рус</button>
+    <button onclick="setLanguage('en')">🇺🇸 Eng</button>
+  </div>
 
-<script>
-/* =========================
-   LANGUAGE SYSTEM
-========================= */
+  <!-- Кнопка назад -->
+  <button id="back-btn" class="back-btn" onclick="goBack()" style="display: none;">
+    ← Назад к художникам
+  </button>
 
-const translations = {
-  ru: { artist1: "Художник 1" },
-  kz: { artist1: "Суретші 1" },
-  en: { artist1: "Artist 1" }
-};
+  <!-- 3D сцена -->
+  <a-scene id="main-scene" style="display: none;" background="color: #1a1a1a">
+  </a-scene>
 
-let currentLang = "ru";
-
-function setLanguage(lang){
-  currentLang = lang;
-
-  // текст
-  document.querySelectorAll("[data-i18n]").forEach(el=>{
-    const key = el.dataset.i18n;
-    el.textContent = translations[lang][key];
-  });
-
-  // модели
-  modelInstances.forEach(instance=>{
-    instance.loadModelByLang(lang);
-  });
-}
-
-document.querySelectorAll(".lang-switch button").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    setLanguage(btn.dataset.lang);
-  });
-});
-
-
-/* =========================
-   MOBILE SLIDERS
-========================= */
-
-let sliders=[];
-
-function initMobileSliders(){
-  if(window.innerWidth<=768 && sliders.length===0){
-    document.querySelectorAll(".artist-slider").forEach(slider=>{
-      sliders.push(new Swiper(slider,{
-        slidesPerView:1,
-        spaceBetween:20
-      }));
-    });
-  } else if(window.innerWidth>768){
-    sliders.forEach(s=>s.destroy(true,true));
-    sliders=[];
-  }
-}
-
-window.addEventListener("load",initMobileSliders);
-window.addEventListener("resize",initMobileSliders);
-
-
-/* =========================
-   THREE + MODEL SYSTEM
-========================= */
-
-const loader = new THREE.GLTFLoader();
-const modelInstances = [];
-
-class ModelViewer{
-  constructor(container){
-    this.container = container;
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x1c1c1c);
-
-    this.camera = new THREE.PerspectiveCamera(
-      45,
-      container.clientWidth/container.clientHeight,
-      0.1,
-      1000
-    );
-    this.camera.position.set(0,1,3);
-
-    this.renderer = new THREE.WebGLRenderer({antialias:true});
-    this.renderer.setSize(container.clientWidth,container.clientHeight);
-    container.appendChild(this.renderer.domElement);
-
-    this.controls = new THREE.OrbitControls(this.camera,this.renderer.domElement);
-    this.controls.enableDamping = true;
-
-    const light = new THREE.DirectionalLight(0xffffff,1);
-    light.position.set(5,5,5);
-    this.scene.add(light);
-
-    this.scene.add(new THREE.AmbientLight(0xffffff,0.5));
-
-    this.currentModel=null;
-
-    this.animate();
-    this.loadModelByLang(currentLang);
-  }
-
-  loadModelByLang(lang){
-    const path = this.container.dataset["model"+lang.toUpperCase()];
-
-    if(this.currentModel){
-      this.scene.remove(this.currentModel);
-    }
-
-    loader.load(path,(gltf)=>{
-      this.currentModel = gltf.scene;
-      this.scene.add(this.currentModel);
-    });
-  }
-
-  animate(){
-    requestAnimationFrame(()=>this.animate());
-    this.controls.update();
-    this.renderer.render(this.scene,this.camera);
-  }
-}
-
-document.querySelectorAll(".canvas-container").forEach(container=>{
-  modelInstances.push(new ModelViewer(container));
-});
-
-</script>
+  <script src="script.js"></script>
 </body>
 </html>
