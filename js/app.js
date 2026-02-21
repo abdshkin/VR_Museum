@@ -389,15 +389,6 @@ function buildRoom(artist) {
   // ---- DECORATIONS: Pedestal ----
   addPedestal(scene, mats, 2.5, 0, -2.5, artist.color || '#c4843a');
 
-  // ---- LOOP ----
-  let animId;
-  function animate() {
-    animId = requestAnimationFrame(animate);
-    orbit.update();
-    renderer.render(scene, camera);
-  }
-  animate();
-
   // ---- RESIZE ----
   function onResize() {
     const w = container.clientWidth, h = container.clientHeight;
@@ -407,93 +398,220 @@ function buildRoom(artist) {
   }
   window.addEventListener('resize', onResize);
 
-  threeCtx = { renderer, animId, onResize, orbit };
+  // Сохраняем контекст ДО старта loop — loop обновляет animId по ссылке
+  threeCtx = { renderer, animId: null, onResize, orbit };
+
+  // ---- LOOP ----
+  function animate() {
+    threeCtx.animId = requestAnimationFrame(animate);
+    orbit.update();
+    renderer.render(scene, camera);
+  }
+  animate();
 
   // Store for texture updates
-  threeCtx.updateTexture = (lang) => {
-    // Re-build room with new lang
-    buildRoom(artist);
-  };
-}
+  threeCtx.updateTexture = () => buildRoom(artist);
 
-// ---- Orbit Controls (manual — no import needed) ----
+// ---- Orbit Controls — Mobile-First, Touch-Safe ----
+// Fixes:
+//  • All listeners on canvas element only (не на window) — не конфликтуют со слайдером
+//  • touchmove с preventDefault() — блокирует системный скролл внутри 3D-зала
+//  • Гироскоп и touch разделены: touch-драг отключает гироскоп на время касания
+//  • Все слушатели собираются в массив и удаляются в destroy() — нет утечек
+//  • Скорость (thetaSpeed/phiSpeed) сбрасывается при новом touchstart — нет "заморозки"
 function createOrbitControls(camera, domEl) {
-  const state = {
-    theta: 0, phi: Math.PI / 2,
-    thetaSpeed: 0, phiSpeed: 0,
-    lastX: 0, lastY: 0,
-    pointerDown: false,
-    radius: 0.01, // near zero = look-around
+  // --- Угловое состояние камеры ---
+  const orb = {
+    theta:       0,             // горизонтальный угол (рад)
+    phi:         Math.PI / 2,   // вертикальный угол (рад)
+    thetaVel:    0,             // скорость по theta (инерция)
+    phiVel:      0,             // скорость по phi (инерция)
+    lastX:       0,
+    lastY:       0,
+    active:      false,         // палец/мышь нажаты прямо сейчас
+    useGyro:     false,         // гироскоп разрешён и активен
+    gyroBase:    null,          // начальный alpha гироскопа
+    touchActive: false,         // пользователь касается экрана
   };
 
-  const sensitivity = 0.004;
-  const damping     = 0.88;
+  const SENSITIVITY = 0.006;   // чувствительность свайпа
+  const DAMPING     = 0.85;    // затухание инерции (меньше = быстрее остановка)
+  const PHI_MIN     = 0.25;    // не смотреть выше потолка
+  const PHI_MAX     = Math.PI - 0.25; // не смотреть ниже пола
 
-  domEl.addEventListener('mousedown',  e => { state.pointerDown = true; state.lastX = e.clientX; state.lastY = e.clientY; });
-  domEl.addEventListener('touchstart', e => { state.pointerDown = true; state.lastX = e.touches[0].clientX; state.lastY = e.touches[0].clientY; }, { passive: true });
+  // --- Список слушателей для cleanup ---
+  const _listeners = [];
+  function on(el, type, fn, opts) {
+    el.addEventListener(type, fn, opts);
+    _listeners.push({ el, type, fn, opts });
+  }
 
-  window.addEventListener('mousemove', e => {
-    if (!state.pointerDown) return;
-    state.thetaSpeed += (e.clientX - state.lastX) * sensitivity;
-    state.phiSpeed   -= (e.clientY - state.lastY) * sensitivity;
-    state.lastX = e.clientX; state.lastY = e.clientY;
-  });
-  window.addEventListener('touchmove', e => {
-    if (!state.pointerDown) return;
-    state.thetaSpeed += (e.touches[0].clientX - state.lastX) * sensitivity;
-    state.phiSpeed   -= (e.touches[0].clientY - state.lastY) * sensitivity;
-    state.lastX = e.touches[0].clientX; state.lastY = e.touches[0].clientY;
+  // =====================================================
+  // TOUCH (основное управление на мобиле)
+  // =====================================================
+  on(domEl, 'touchstart', e => {
+    if (e.touches.length !== 1) return; // игнорируем мультитач
+    orb.active      = true;
+    orb.touchActive = true;
+    orb.lastX    = e.touches[0].clientX;
+    orb.lastY    = e.touches[0].clientY;
+    // Сбрасываем инерцию чтобы не "дёргало" при новом касании
+    orb.thetaVel = 0;
+    orb.phiVel   = 0;
+    // Гироскоп отключается на время ручного свайпа
+    orb.gyroBase = null;
   }, { passive: true });
 
-  window.addEventListener('mouseup',   () => { state.pointerDown = false; });
-  window.addEventListener('touchend',  () => { state.pointerDown = false; });
+  on(domEl, 'touchmove', e => {
+    if (!orb.active || e.touches.length !== 1) return;
+    // ВАЖНО: preventDefault блокирует скролл страницы внутри 3D-зала
+    // passive:false обязателен для этого
+    e.preventDefault();
 
-  // Gyroscope (DeviceOrientation)
-  let gyroEnabled = false;
-  let baseAlpha = null;
-  window.addEventListener('deviceorientation', e => {
-    if (!gyroEnabled || e.gamma == null) return;
-    if (baseAlpha == null) baseAlpha = e.alpha;
-    state.theta = -((e.alpha - baseAlpha) % 360) * (Math.PI / 180) * 0.6;
-    state.phi   = Math.PI / 2 - e.beta  * (Math.PI / 180) * 0.4;
-    state.phi   = Math.max(0.3, Math.min(Math.PI - 0.3, state.phi));
+    const dx = e.touches[0].clientX - orb.lastX;
+    const dy = e.touches[0].clientY - orb.lastY;
+
+    orb.thetaVel = dx * SENSITIVITY;
+    orb.phiVel   = -dy * SENSITIVITY;
+    orb.theta   += orb.thetaVel;
+    orb.phi     += orb.phiVel;
+    orb.phi      = Math.max(PHI_MIN, Math.min(PHI_MAX, orb.phi));
+
+    orb.lastX = e.touches[0].clientX;
+    orb.lastY = e.touches[0].clientY;
+  }, { passive: false }); // ← НЕ passive — нужен preventDefault
+
+  on(domEl, 'touchend', e => {
+    orb.active      = false;
+    orb.touchActive = false;
+    // Инерция сохраняется — продолжит гасить в update()
+  }, { passive: true });
+
+  on(domEl, 'touchcancel', e => {
+    orb.active      = false;
+    orb.touchActive = false;
+    orb.thetaVel    = 0;
+    orb.phiVel      = 0;
+  }, { passive: true });
+
+  // =====================================================
+  // MOUSE (десктоп)
+  // =====================================================
+  on(domEl, 'mousedown', e => {
+    orb.active   = true;
+    orb.lastX    = e.clientX;
+    orb.lastY    = e.clientY;
+    orb.thetaVel = 0;
+    orb.phiVel   = 0;
+    domEl.style.cursor = 'grabbing';
   });
 
-  // Try to enable gyro
+  // mousemove и mouseup — на document чтобы не терять курсор за пределами canvas
+  const onMouseMove = e => {
+    if (!orb.active) return;
+    const dx = e.clientX - orb.lastX;
+    const dy = e.clientY - orb.lastY;
+    orb.thetaVel = dx * SENSITIVITY * 0.7;
+    orb.phiVel   = -dy * SENSITIVITY * 0.7;
+    orb.theta   += orb.thetaVel;
+    orb.phi     += orb.phiVel;
+    orb.phi      = Math.max(PHI_MIN, Math.min(PHI_MAX, orb.phi));
+    orb.lastX    = e.clientX;
+    orb.lastY    = e.clientY;
+  };
+  const onMouseUp = () => {
+    orb.active = false;
+    domEl.style.cursor = 'grab';
+  };
+  on(document, 'mousemove', onMouseMove);
+  on(document, 'mouseup',   onMouseUp);
+  domEl.style.cursor = 'grab';
+
+  // =====================================================
+  // ГИРОСКОП (DeviceOrientation)
+  // Включается только если touch не активен — нет конфликта
+  // =====================================================
+  const onOrientation = e => {
+    if (orb.touchActive || !orb.useGyro) return;
+    if (e.beta == null || e.gamma == null)  return;
+
+    // Захватываем базовую точку при первом событии после включения
+    if (orb.gyroBase === null) {
+      orb.gyroBase = { alpha: e.alpha || 0, beta: e.beta, gamma: e.gamma };
+      return;
+    }
+
+    // Горизонтальное вращение — gamma (наклон телефона влево/вправо)
+    const dGamma = (e.gamma - orb.gyroBase.gamma);
+    // Вертикальное — beta (наклон вперёд/назад)
+    const dBeta  = (e.beta  - orb.gyroBase.beta);
+
+    orb.theta = -dGamma * (Math.PI / 180) * 1.2;
+    orb.phi   = Math.max(PHI_MIN, Math.min(PHI_MAX,
+      Math.PI / 2 - dBeta * (Math.PI / 180) * 0.8
+    ));
+  };
+  on(window, 'deviceorientation', onOrientation);
+
+  // iOS 13+ требует явного разрешения пользователя
   if (typeof DeviceOrientationEvent !== 'undefined') {
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS 13+ — requires user gesture; we'll try on first touch
-      domEl.addEventListener('touchend', async () => {
+      // Запрашиваем при первом тапе — уже есть жест пользователя
+      const reqGyro = async () => {
         try {
           const perm = await DeviceOrientationEvent.requestPermission();
-          if (perm === 'granted') gyroEnabled = true;
+          if (perm === 'granted') {
+            orb.useGyro  = true;
+            orb.gyroBase = null;
+          }
         } catch (_) {}
-      }, { once: true });
+      };
+      on(domEl, 'touchend', reqGyro, { once: true, passive: true });
     } else {
-      gyroEnabled = true;
+      // Android и старые Safari — гироскоп сразу доступен
+      orb.useGyro  = true;
+      orb.gyroBase = null;
     }
   }
 
-  return {
-    update() {
-      if (!gyroEnabled || state.pointerDown) {
-        state.theta += state.thetaSpeed;
-        state.phi   += state.phiSpeed;
-        state.thetaSpeed *= damping;
-        state.phiSpeed   *= damping;
-        state.phi = Math.max(0.3, Math.min(Math.PI - 0.3, state.phi));
-      }
+  // =====================================================
+  // UPDATE — вызывается каждый кадр из animate()
+  // =====================================================
+  function update() {
+    // Применяем инерцию только когда не касаемся экрана
+    if (!orb.active) {
+      orb.theta    += orb.thetaVel;
+      orb.phi      += orb.phiVel;
+      orb.thetaVel *= DAMPING;
+      orb.phiVel   *= DAMPING;
+      // Гасим до нуля чтобы не было вечного дрейфа
+      if (Math.abs(orb.thetaVel) < 0.0001) orb.thetaVel = 0;
+      if (Math.abs(orb.phiVel)   < 0.0001) orb.phiVel   = 0;
+      orb.phi = Math.max(PHI_MIN, Math.min(PHI_MAX, orb.phi));
+    }
 
-      const r = 2.5;
-      camera.position.set(0, 1.6, 0.1);
-      camera.lookAt(
-        Math.sin(state.theta) * Math.sin(state.phi) * r,
-        1.6 + Math.cos(state.phi) * r * 0.5,
-        Math.cos(state.theta) * Math.sin(state.phi) * r * -1
-      );
-    },
-    state,
-  };
+    // Камера стоит на месте, смотрит в точку на сфере вокруг неё
+    const R  = 3.0;
+    const ex = Math.sin(orb.phi) * Math.sin(orb.theta);
+    const ey = Math.cos(orb.phi);
+    const ez = -Math.sin(orb.phi) * Math.cos(orb.theta);
+
+    camera.position.set(0, 1.62, 0);
+    camera.lookAt(ex * R, 1.62 + ey * R * 0.6, ez * R);
+  }
+
+  // =====================================================
+  // DESTROY — убираем всех слушателей при выходе из зала
+  // =====================================================
+  function destroy() {
+    _listeners.forEach(({ el, type, fn, opts }) => {
+      el.removeEventListener(type, fn, opts);
+    });
+    _listeners.length = 0;
+    domEl.style.cursor = '';
+  }
+
+  return { update, destroy, orb };
 }
 
 function addBox(scene, w, h, d, x, y, z, mat, receiveShadow = false) {
@@ -550,6 +668,8 @@ function addPedestal(scene, mats, x, y, z, colorStr) {
 function destroyRoom() {
   if (!threeCtx) return;
   cancelAnimationFrame(threeCtx.animId);
+  // Убираем ВСЕ touch/mouse/gyro слушатели orbit через его destroy()
+  if (threeCtx.orbit && threeCtx.orbit.destroy) threeCtx.orbit.destroy();
   window.removeEventListener('resize', threeCtx.onResize);
   threeCtx.renderer.dispose();
   const canvas = threeCtx.renderer.domElement;
