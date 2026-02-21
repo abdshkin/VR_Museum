@@ -1,0 +1,22 @@
+room_base.glb — PLACEHOLDER NOTE
+==================================
+
+This file is a placeholder. The museum uses a procedurally-built Three.js room,
+so a .glb file is NOT required for the prototype to work.
+
+To use a custom GLB model:
+1. Export your room from Blender as room_base.glb (Draco compressed recommended)
+2. In js/app.js → buildRoom(), add a GLTFLoader section:
+
+   import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+   const loader = new GLTFLoader();
+   loader.load('assets/models/room_base.glb', gltf => {
+     scene.add(gltf.scene);
+   });
+
+3. Remove the manual addBox() room geometry below that comment.
+
+Recommended GLB specs:
+  - Max file size: 5MB (for mobile performance)
+  - Textures: baked into GLB, 1024×1024 max
+  - Faces: < 50k tris
