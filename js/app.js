@@ -400,64 +400,122 @@ function destroyRoom() {
 }
 
 // ============================================================
-// ORBIT CONTROLS — мобильный, без утечек
+// ORBIT CONTROLS — мобильный, pinch-zoom, без утечек
 // ============================================================
 function createOrbit(camera, canvas) {
   var o = {
-    theta: 0, phi: Math.PI / 2,
+    theta: 0,
+    phi: Math.PI / 2,   // PI/2 = смотрим прямо вперёд
     vTheta: 0, vPhi: 0,
     lastX: 0, lastY: 0,
     down: false,
     touchDown: false,
     gyroOn: false,
     gyroBase: null,
+    gyroTarget: { theta: 0, phi: Math.PI / 2 },
+    useGyroNow: false,
+    // Zoom (FOV)
+    fov: 65,            // текущий FOV
+    pinchDist: 0,       // расстояние между пальцами в начале pinch
+    isPinch: false,
   };
 
-  var SENS  = 0.010;   // чувствительность свайпа (было 0.006)
-  var DAMP  = 0.80;   // инерция
-  var PHMIN = 0.05;   // почти потолок (было 0.28)
-  var PHMAX = Math.PI - 0.05; // почти пол (было 0.28)
+  var SENS   = 0.010;
+  var DAMP   = 0.80;
+  // Вертикаль: 0.15 (почти потолок) … PI-0.15 (почти пол)
+  // НЕ трогать 0 и PI — там singularity и камера переворачивается!
+  var PHMIN  = 0.15;
+  var PHMAX  = Math.PI - 0.15;
+  var FOV_MIN = 20;    // максимальный зум (4x от 65°)
+  var FOV_MAX = 65;    // нормальный вид
 
-  // Список слушателей для cleanup
   var listeners = [];
   function add(el, type, fn, opt) {
     el.addEventListener(type, fn, opt);
     listeners.push([el, type, fn, opt]);
   }
 
-  // --- TOUCH ---
-  add(canvas, 'touchstart', function(e) {
-    if (e.touches.length !== 1) return;
-    o.down = true; o.touchDown = true;
-    o.lastX = e.touches[0].clientX;
-    o.lastY = e.touches[0].clientY;
-    o.vTheta = 0; o.vPhi = 0;
-    // Синхронизируем гиро-цель с текущим положением — нет рывка при отрыве
-    o.gyroTarget.theta = o.theta;
-    o.gyroTarget.phi   = o.phi;
-    o.useGyroNow = false;
-  }, { passive: true });
+  // Расстояние между двумя касаниями
+  function pinchDist(e) {
+    var dx = e.touches[0].clientX - e.touches[1].clientX;
+    var dy = e.touches[0].clientY - e.touches[1].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
 
+  // --- TOUCH START ---
+  add(canvas, 'touchstart', function(e) {
+    e.preventDefault();
+
+    if (e.touches.length === 2) {
+      // Начало pinch-zoom — запоминаем расстояние
+      o.isPinch    = true;
+      o.down       = false;
+      o.touchDown  = false;
+      o.pinchDist  = pinchDist(e);
+      return;
+    }
+
+    if (e.touches.length === 1) {
+      o.isPinch   = false;
+      o.down      = true;
+      o.touchDown = true;
+      o.lastX     = e.touches[0].clientX;
+      o.lastY     = e.touches[0].clientY;
+      o.vTheta    = 0;
+      o.vPhi      = 0;
+      // Синхронизируем гиро-цель — нет рывка при отрыве
+      o.gyroTarget.theta = o.theta;
+      o.gyroTarget.phi   = o.phi;
+      o.useGyroNow = false;
+    }
+  }, { passive: false });
+
+  // --- TOUCH MOVE ---
   add(canvas, 'touchmove', function(e) {
-    if (!o.down || e.touches.length !== 1) return;
-    e.preventDefault(); // блокируем системный скролл
+    e.preventDefault();
+
+    // PINCH-ZOOM (два пальца)
+    if (e.touches.length === 2) {
+      o.isPinch = true;
+      o.down    = false;
+      var dist  = pinchDist(e);
+      var delta = o.pinchDist - dist;   // >0 = пальцы сближаются = zoom out
+      o.fov     = Math.max(FOV_MIN, Math.min(FOV_MAX, o.fov + delta * 0.15));
+      camera.fov = o.fov;
+      camera.updateProjectionMatrix();
+      o.pinchDist = dist;
+      return;
+    }
+
+    // ORBIT (один палец)
+    if (!o.down || e.touches.length !== 1 || o.isPinch) return;
     var dx = e.touches[0].clientX - o.lastX;
     var dy = e.touches[0].clientY - o.lastY;
-    o.vTheta =  dx * SENS;
-    o.vPhi   = -dy * SENS;
-    o.theta += o.vTheta;
-    o.phi   += o.vPhi;
-    o.phi    = Math.max(PHMIN, Math.min(PHMAX, o.phi));
-    o.lastX  = e.touches[0].clientX;
-    o.lastY  = e.touches[0].clientY;
-  }, { passive: false }); // НЕ passive — нужен preventDefault
 
-  add(canvas, 'touchend', function() {
-    o.down = false; o.touchDown = false;
-    // Сбрасываем gyroBase — гироскоп возьмёт текущую позицию как новую точку отсчёта
-    o.gyroBase = null;
+    o.vTheta  =  dx * SENS;
+    o.vPhi    = -dy * SENS;
+    o.theta  += o.vTheta;
+
+    // Зажимаем phi СТРОГО чтобы никогда не выйти за [PHMIN, PHMAX]
+    o.phi = Math.max(PHMIN, Math.min(PHMAX, o.phi + o.vPhi));
+
+    o.lastX = e.touches[0].clientX;
+    o.lastY = e.touches[0].clientY;
+  }, { passive: false });
+
+  // --- TOUCH END ---
+  add(canvas, 'touchend', function(e) {
+    o.isPinch   = false;
+    o.down      = false;
+    o.touchDown = false;
+    // После касания гироскоп берёт текущее положение как базу — нет прыжка
+    o.gyroBase  = null;
   }, { passive: true });
-  add(canvas, 'touchcancel', function() { o.down = false; o.touchDown = false; o.vTheta = 0; o.vPhi = 0; }, { passive: true });
+
+  add(canvas, 'touchcancel', function() {
+    o.isPinch = false; o.down = false; o.touchDown = false;
+    o.vTheta  = 0;     o.vPhi = 0;
+  }, { passive: true });
 
   // --- MOUSE (десктоп) ---
   add(canvas, 'mousedown', function(e) {
@@ -465,14 +523,22 @@ function createOrbit(camera, canvas) {
     o.vTheta = 0; o.vPhi = 0;
     canvas.style.cursor = 'grabbing';
   });
+  // Колёсико мыши = zoom на десктопе
+  add(canvas, 'wheel', function(e) {
+    e.preventDefault();
+    o.fov = Math.max(FOV_MIN, Math.min(FOV_MAX, o.fov + e.deltaY * 0.05));
+    camera.fov = o.fov;
+    camera.updateProjectionMatrix();
+  }, { passive: false });
+
   var mmove = function(e) {
     if (!o.down) return;
     var dx = e.clientX - o.lastX, dy = e.clientY - o.lastY;
     o.vTheta =  dx * SENS * 0.7;
     o.vPhi   = -dy * SENS * 0.7;
-    o.theta += o.vTheta; o.phi += o.vPhi;
-    o.phi = Math.max(PHMIN, Math.min(PHMAX, o.phi));
-    o.lastX = e.clientX; o.lastY = e.clientY;
+    o.theta += o.vTheta;
+    o.phi    = Math.max(PHMIN, Math.min(PHMAX, o.phi + o.vPhi));
+    o.lastX  = e.clientX; o.lastY = e.clientY;
   };
   var mup = function() { o.down = false; canvas.style.cursor = 'grab'; };
   add(document, 'mousemove', mmove);
@@ -480,28 +546,21 @@ function createOrbit(camera, canvas) {
   canvas.style.cursor = 'grab';
 
   // --- ГИРОСКОП ---
-  // Гироскоп пишет только в gyroTarget — update() делает lerp
-  // При touchDown флаг useGyroNow = false — touch управляет напрямую
-  o.gyroTarget = { theta: 0, phi: Math.PI / 2 };
-  o.useGyroNow = false;
-
   var onOrientation = function(e) {
     if (!o.gyroOn || e.beta == null) return;
     if (o.gyroBase === null) {
       o.gyroBase = { beta: e.beta, gamma: e.gamma || 0 };
       return;
     }
-    // Пересчитываем цель гироскопа — не трогаем o.theta/o.phi напрямую
     var dG = (e.gamma || 0) - o.gyroBase.gamma;
-    var dB = e.beta         - o.gyroBase.beta;
+    var dB = e.beta - o.gyroBase.beta;
     o.gyroTarget.theta = -dG * (Math.PI / 180) * 1.1;
-    o.gyroTarget.phi   = Math.max(PHMIN, Math.min(PHMAX, Math.PI/2 - dB * (Math.PI/180) * 0.7));
-    // Включаем гиро-режим только когда палец НЕ на экране
+    o.gyroTarget.phi   = Math.max(PHMIN, Math.min(PHMAX,
+      Math.PI/2 - dB * (Math.PI/180) * 0.7));
     o.useGyroNow = !o.touchDown;
   };
   add(window, 'deviceorientation', onOrientation);
 
-  // iOS требует разрешения
   if (typeof DeviceOrientationEvent !== 'undefined') {
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
       add(canvas, 'touchend', function reqGyro() {
@@ -517,28 +576,31 @@ function createOrbit(camera, canvas) {
 
   return {
     update: function() {
-      if (o.down) {
-        // Пока палец на экране — инерция не накапливается, гиро игнорируется
-      } else if (o.useGyroNow) {
-        // Гироскоп-режим: плавно двигаемся к gyroTarget (lerp)
-        var lerpSpeed = 0.12;
-        o.theta += (o.gyroTarget.theta - o.theta) * lerpSpeed;
-        o.phi   += (o.gyroTarget.phi   - o.phi)   * lerpSpeed;
-        o.vTheta = 0; o.vPhi = 0; // гасим инерцию touch
-      } else {
-        // Touch-инерция: докатываемся после отрыва пальца
-        o.theta  += o.vTheta; o.phi += o.vPhi;
-        o.vTheta *= DAMP;     o.vPhi *= DAMP;
-        if (Math.abs(o.vTheta) < 0.0001) o.vTheta = 0;
-        if (Math.abs(o.vPhi)   < 0.0001) o.vPhi   = 0;
-        o.phi = Math.max(PHMIN, Math.min(PHMAX, o.phi));
+      if (!o.down && !o.isPinch) {
+        if (o.useGyroNow) {
+          // Гиро-режим: lerp к цели
+          o.theta += (o.gyroTarget.theta - o.theta) * 0.12;
+          o.phi   += (o.gyroTarget.phi   - o.phi)   * 0.12;
+          o.vTheta = 0; o.vPhi = 0;
+        } else {
+          // Touch-инерция после отрыва
+          o.theta += o.vTheta;
+          o.phi    = Math.max(PHMIN, Math.min(PHMAX, o.phi + o.vPhi));
+          o.vTheta *= DAMP; o.vPhi *= DAMP;
+          if (Math.abs(o.vTheta) < 0.0001) o.vTheta = 0;
+          if (Math.abs(o.vPhi)   < 0.0001) o.vPhi   = 0;
+        }
       }
+
+      // Камера смотрит в точку на единичной сфере вокруг себя
       var R  = 3.0;
-      var ex = Math.sin(o.phi) * Math.sin(o.theta);
-      var ey = Math.cos(o.phi);
-      var ez = -Math.sin(o.phi) * Math.cos(o.theta);
+      var sp = Math.sin(o.phi);
+      var cp = Math.cos(o.phi);
+      var st = Math.sin(o.theta);
+      var ct = Math.cos(o.theta);
+      // sp всегда >= sin(0.15) ≈ 0.15 — singularity невозможна
       camera.position.set(0, 1.62, 0);
-      camera.lookAt(ex * R, 1.62 + ey * R * 0.5, ez * R);
+      camera.lookAt(sp * st * R, 1.62 + cp * R * 0.5, -sp * ct * R);
     },
     destroy: function() {
       listeners.forEach(function(l) { l[0].removeEventListener(l[1], l[2], l[3]); });
