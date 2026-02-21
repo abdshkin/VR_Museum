@@ -5,9 +5,39 @@
 
 // ─── LANGUAGE STRINGS ────────────────────────────────────────────────────────
 var LANG = {
-  kz: { back: '\u2190 \u0410\u0440\u0442\u049b\u0430', enterRoom: '\u0417\u0430\u043b\u0493\u0430 \u043a\u0456\u0440\u0443', explore: '\u0416\u0430\u043b\u0493\u0430\u0441\u0442\u044b\u0440', dragHint: '\ud83d\udcf1 \u0410\u0439\u043d\u0430\u043b\u0434\u044b\u0440\u0443 \u04af\u0448\u0456\u043d \u0441\u04af\u0439\u0440\u0435\u043f \u0430\u043f\u0430\u0440\u044b\u04a3\u044b\u0437', bio: '\u0421\u0443\u0440\u0435\u0442\u0448\u0456 \u0442\u0443\u0440\u0430\u043b\u044b' },
-  ru: { back: '\u2190 \u041d\u0430\u0437\u0430\u0434',  enterRoom: '\u0412\u043e\u0439\u0442\u0438 \u0432 \u0437\u0430\u043b', explore: '\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c', dragHint: '\ud83d\udcf1 \u041f\u0435\u0440\u0435\u0442\u044f\u043d\u0438 \u0434\u043b\u044f \u043e\u0441\u043c\u043e\u0442\u0440\u0430', bio: '\u041e \u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a\u0435' },
-  en: { back: '\u2190 Back',   enterRoom: 'Enter Room',  explore: 'Explore', dragHint: '\ud83d\udcf1 Drag to explore room', bio: 'About the Artist' },
+  kz: {
+    back:       '← Артқа',
+    enterRoom:  'Залға кіру',
+    explore:    'Жалғастыру',
+    dragHint:   '📱 Айналдыру үшін сүйреп апарыңыз',
+    bio:        'Суретші туралы',
+    loading:    'Жүктелуде…',
+    gallery:    'Галерея',
+    eyebrow:    'Қазақстан · Өнер · Art',
+    title:      'Ұлы Суретшілер',
+  },
+  ru: {
+    back:       '← Назад',
+    enterRoom:  'Войти в зал',
+    explore:    'Продолжить',
+    dragHint:   '📱 Перетяни для осмотра',
+    bio:        'О художнике',
+    loading:    'Жүктелуде…',
+    gallery:    'Галерея',
+    eyebrow:    'Казахстан · Өнер · Art',
+    title:      'Ұлы Суретшілер',
+  },
+  en: {
+    back:       '← Back',
+    enterRoom:  'Enter Room',
+    explore:    'Explore',
+    dragHint:   '📱 Drag to explore room',
+    bio:        'About the Artist',
+    loading:    'Loading…',
+    gallery:    'Gallery',
+    eyebrow:    'Kazakhstan · Өнер · Art',
+    title:      'Great Artists',
+  },
 };
 
 // ─── ARTIST DATA (inline fallback — works without server / file://) ──────────
@@ -164,11 +194,20 @@ function hideBio()  { D.bioPanel.classList.remove('visible'); }
 function setLang(lang) {
   S.lang = lang;
   D.langBtns.forEach(function(btn) { btn.classList.toggle('active', btn.dataset.lang === lang); });
-  D.backBtn.textContent     = LANG[lang].back;
-  D.bioEnterBtn.textContent = LANG[lang].enterRoom;
-  D.bioLabel.textContent    = LANG[lang].bio;
-  D.gyroHint.innerHTML      = LANG[lang].dragHint + '<br><small>Drag to explore</small>';
+  if (D.bioEnterBtn) D.bioEnterBtn.textContent = LANG[lang].enterRoom;
+  if (D.bioLabel)    D.bioLabel.textContent    = LANG[lang].bio;
+  if (D.gyroHint)    D.gyroHint.innerHTML      = LANG[lang].dragHint;
   if (D.roomBackBtn) D.roomBackBtn.textContent = LANG[lang].back;
+  // Update section eyebrow and title
+  var eyebrow = document.querySelector('.section-eyebrow');
+  if (eyebrow) eyebrow.textContent = LANG[lang].eyebrow;
+  var titleEl = document.querySelector('.section-title');
+  if (titleEl) titleEl.textContent = LANG[lang].title;
+  // Update room label if in room
+  if (S.activeArtist && D.roomLabelName) {
+    D.roomLabelName.textContent  = S.activeArtist.name[lang] || S.activeArtist.name.en;
+    D.roomLabelYears.textContent = S.activeArtist.years;
+  }
   updateCardText();
   refreshBio();
   if (S.view === 'room' && S.activeArtist && threeCtx) buildRoom(S.activeArtist);
@@ -469,7 +508,6 @@ async function init() {
   D.dots          = document.getElementById('slider-dots');
   D.prevBtn       = document.getElementById('prev-arrow');
   D.nextBtn       = document.getElementById('next-arrow');
-  D.backBtn       = document.getElementById('back-btn');
   D.bioPanel      = document.getElementById('bio-panel');
   D.bioName       = document.getElementById('bio-name');
   D.bioYears      = document.getElementById('bio-years');
@@ -481,7 +519,7 @@ async function init() {
   D.roomLabelYears = document.getElementById('room-label-years');
   D.gyroHint      = document.getElementById('gyro-hint');
   D.langBtns      = document.querySelectorAll('.lang-btn');
-  D.roomBackBtn   = document.getElementById('room-back-btn');  // новая кнопка
+  D.roomBackBtn   = document.getElementById('room-back-btn');
 
   var missing = ['track','trackWrap','dots','bioPanel','roomContainer'].filter(function(k) { return !D[k]; });
   if (missing.length) {
@@ -499,12 +537,12 @@ async function init() {
   initSwipe();
   D.langBtns.forEach(function(btn) { btn.classList.toggle('active', btn.dataset.lang === 'ru'); });
   D.track.style.transform = 'translateX(0%)';
-  refreshBio();
+  // Apply initial language strings
+  setLang('ru');
   startAuto();
 
   if (D.prevBtn)    D.prevBtn.addEventListener('click',    function() { prev(); stopAuto(); startAuto(); });
   if (D.nextBtn)    D.nextBtn.addEventListener('click',    function() { next(); stopAuto(); startAuto(); });
-  if (D.backBtn)    D.backBtn.addEventListener('click',    goBack);
   if (D.roomBackBtn) D.roomBackBtn.addEventListener('click', goBack);
 
   if (D.bioEnterBtn) D.bioEnterBtn.addEventListener('click', function() {
