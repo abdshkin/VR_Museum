@@ -1,0 +1,109 @@
+{
+  "artists": [
+    {
+      "id": "telzhanov",
+      "name": {
+        "kz": "Молдахмет Телжанов",
+        "ru": "Молдахмет Телжанов",
+        "en": "Moldakhmet Telzhanov"
+      },
+      "years": "1920–2011",
+      "bio": {
+        "kz": "Молдахмет Телжанов — қазақ кескіндемесінің классигі. Оның шығармалары дала өмірін, ұлттық дәстүрлерді нәзік сезіммен бейнелейді. «Күз» және «Жайлауда» туындылары Қазақстан өнерінің алтын қорына кірді.",
+        "ru": "Молдахмет Телжанов — классик казахской живописи. Его работы с тонким чувством передают жизнь степи и национальные традиции. Полотна «Осень» и «На джайляу» вошли в золотой фонд искусства Казахстана.",
+        "en": "Moldakhmet Telzhanov is a classic of Kazakh painting. His works sensitively portray steppe life and national traditions. 'Autumn' and 'On Dzhaılau' are considered treasures of Kazakhstani art."
+      },
+      "thumb": "thumbs/telzhanov_thumb.jpg",
+      "color": "#C8A96E",
+      "infographic": {
+        "kz": "infographics/telzhanov_kz.jpg",
+        "ru": "infographics/telzhanov_ru.jpg",
+        "en": "infographics/telzhanov_en.jpg"
+      }
+    },
+    {
+      "id": "galimbayeva",
+      "name": {
+        "kz": "Гүлфайрус Ғалымбаева",
+        "ru": "Гульфайрус Галимбаева",
+        "en": "Gulfairous Galimbayeva"
+      },
+      "years": "1929–2008",
+      "bio": {
+        "kz": "Гүлфайрус Ғалымбаева — қазақ мүсіншілігінің алғашқы әйел өкілдерінің бірі. Оның қола мүсіндері мен рельефтері Алматының көшелерін безендіреді. Еңбек пен аналықты дәріптеген шығармаларымен танымал.",
+        "ru": "Гульфайрус Галимбаева — одна из первых женщин-скульпторов Казахстана. Её бронзовые скульптуры и рельефы украшают улицы Алматы. Известна произведениями, воспевающими труд и материнство.",
+        "en": "Gulfairous Galimbayeva was one of Kazakhstan's first female sculptors. Her bronze sculptures and reliefs adorn the streets of Almaty. She is celebrated for works glorifying labor and motherhood."
+      },
+      "thumb": "thumbs/galimbayeva_thumb.jpg",
+      "color": "#9B6E8A",
+      "infographic": {
+        "kz": "infographics/galimbayeva_kz.jpg",
+        "ru": "infographics/galimbayeva_ru.jpg",
+        "en": "infographics/galimbayeva_en.jpg"
+      }
+    },
+    {
+      "id": "mullashev",
+      "name": {
+        "kz": "Хамит Мұлашев",
+        "ru": "Хамит Мулашев",
+        "en": "Khamit Mullashev"
+      },
+      "years": "1924–1994",
+      "bio": {
+        "kz": "Хамит Мұлашев — лирикалық пейзаждар шебері. Оның картиналары қазақ табиғатының сұлулығын — тау бұлақтарын, дала кеңістіктерін — жылы алтын реңктермен жеткізеді. Халықаралық көрмелердің лауреаты.",
+        "ru": "Хамит Мулашев — мастер лирического пейзажа. Его картины передают красоту казахской природы — горные родники, степные просторы — в тёплых золотистых тонах. Лауреат международных выставок.",
+        "en": "Khamit Mullashev was a master of lyrical landscape painting. His canvases capture the beauty of Kazakh nature — mountain springs, steppe expanses — in warm golden tones. A laureate of international exhibitions."
+      },
+      "thumb": "thumbs/mullashev_thumb.jpg",
+      "color": "#6E8A5F",
+      "infographic": {
+        "kz": "infographics/mullashev_kz.jpg",
+        "ru": "infographics/mullashev_ru.jpg",
+        "en": "infographics/mullashev_en.jpg"
+      }
+    },
+    {
+      "id": "ismailova",
+      "name": {
+        "kz": "Зайра Ысмайылова",
+        "ru": "Зайра Исмаилова",
+        "en": "Zaira Ismailova"
+      },
+      "years": "1927–2016",
+      "bio": {
+        "kz": "Зайра Ысмайылова — қазақ графикасы мен кітап безендіру өнерінің классигі. Жүздеген кітаптарды безендірді, оның иллюстрациялары ұлттық ертегілер мен эпостарды жаңа деммен жандандырды.",
+        "ru": "Зайра Исмаилова — классик казахской графики и книжной иллюстрации. Оформила сотни книг, её иллюстрации вдохнули новую жизнь в национальные сказки и эпосы.",
+        "en": "Zaira Ismailova is a classic of Kazakh graphic art and book illustration. She illustrated hundreds of books, breathing new life into national fairy tales and epics."
+      },
+      "thumb": "thumbs/ismailova_thumb.jpg",
+      "color": "#6E7A9B",
+      "infographic": {
+        "kz": "infographics/ismailova_kz.jpg",
+        "ru": "infographics/ismailova_ru.jpg",
+        "en": "infographics/ismailova_en.jpg"
+      }
+    },
+    {
+      "id": "kasteev",
+      "name": {
+        "kz": "Әбілхан Қастеев",
+        "ru": "Абылхан Кастеев",
+        "en": "Abylkhan Kasteev"
+      },
+      "years": "1904–1973",
+      "bio": {
+        "kz": "Әбілхан Қастеев — қазақ кәсіби кескіндемесінің негізін қалаушы. Мемлекеттік өнер мұражайы оның атымен аталады. Ерте шығармалары күнделікті өмір мен дала дәстүрлерін аңқылдата бейнелейді.",
+        "ru": "Абылхан Кастеев — основоположник казахской профессиональной живописи. Государственный музей искусств носит его имя. Ранние работы живо изображают повседневную жизнь и традиции степи.",
+        "en": "Abylkhan Kasteev is the founder of Kazakh professional painting. The State Museum of Arts bears his name. His early works vividly depict everyday life and steppe traditions."
+      },
+      "thumb": "thumbs/kasteev_thumb.jpg",
+      "color": "#A06E6E",
+      "infographic": {
+        "kz": "infographics/kasteev_kz.jpg",
+        "ru": "infographics/kasteev_ru.jpg",
+        "en": "infographics/kasteev_en.jpg"
+      }
+    }
+  ]
+}

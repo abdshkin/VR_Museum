@@ -1,58 +1,118 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <title>Виртуальный Музей Казахстанских Художников</title>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0f0e0c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Казақ суретшілерінің виртуалды мұражайы — Virtual Museum of Kazakh Artists" />
+  
+  <title>Қазақ Суретшілері | Виртуалды Мұражай</title>
+  
+  <!-- A-Frame 1.6 (CDN — works offline with cached version) -->
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="https://unpkg.com/aframe-orbit-controls@1.3.2/dist/aframe-orbit-controls.min.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <!-- A-Frame Extras: orbit-controls (gyroscope support) -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.4.0/dist/aframe-extras.min.js"></script>
+
+  <link rel="stylesheet" href="css/main.css" />
+  
+  <!-- Prevent FOUC -->
+  <style>body { background: #0f0e0c; }</style>
 </head>
 <body>
-  <!-- Главный слайдер художников -->
-  <div id="artist-slider" class="slider-container">
-    <button class="nav-btn prev" onclick="prevArtist()">‹</button>
-    <div id="slider-track" class="slider-track">
-      <div class="artist-card" data-room="telzhanov" onclick="enterRoom('telzhanov')">
-        <img src="telzhanov_thumb.jpg" alt="Тельжанов">
-        <h3>Тельжанов</h3>
-      </div>
-      <div class="artist-card" data-room="galimbaeva" onclick="enterRoom('galimbaeva')">
-        <img src="galimbaeva_thumb.jpg" alt="Галимбаева">
-        <h3>Галимбаева</h3>
-      </div>
-      <div class="artist-card" data-room="mullashev" onclick="enterRoom('mullashev')">
-        <img src="mullashev_thumb.jpg" alt="Муллашев">
-        <h3>Муллашев</h3>
-      </div>
-      <div class="artist-card" data-room="ismailova" onclick="enterRoom('ismailova')">
-        <img src="ismailova_thumb.jpg" alt="Исмаилова">
-        <h3>Исмаилова</h3>
-      </div>
-      <div class="artist-card" data-room="kasteev" onclick="enterRoom('kasteev')">
-        <img src="kasteev_thumb.jpg" alt="Кастеев">
-        <h3>Кастеев</h3>
+
+<!-- ==========================================
+     LOADER OVERLAY
+     Customize: change .loader-text content
+     ========================================== -->
+<div id="loader" role="status" aria-label="Loading museum">
+  <div class="loader-ornament" aria-hidden="true"></div>
+  <div class="loader-text">Мұражай жүктелуде…</div>
+</div>
+
+<!-- ==========================================
+     HEADER (fixed, always visible)
+     ========================================== -->
+<header id="header">
+  <div class="museum-logo" aria-label="Virtual Museum of Kazakh Artists">
+    Виртуалды Мұражай
+    <span>Kazakh Artists</span>
+  </div>
+
+  <!-- CUSTOMIZE: Add/remove language buttons as needed -->
+  <nav id="lang-switcher" role="navigation" aria-label="Language switcher">
+    <button class="lang-btn" data-lang="kz" aria-label="Қазақша">ҚЗ</button>
+    <button class="lang-btn active" data-lang="ru" aria-label="Русский">РУ</button>
+    <button class="lang-btn" data-lang="en" aria-label="English">EN</button>
+  </nav>
+</header>
+
+<!-- ==========================================
+     MAIN APP
+     ========================================== -->
+<main id="app" role="main">
+
+  <!-- =========================================
+       VIEW 1: ARTIST SLIDER
+       ========================================= -->
+  <section id="slider-view" class="view" aria-label="Artist gallery">
+    
+    <div class="deco-line" aria-hidden="true"></div>
+
+    <!-- Slider track (populated by JS) -->
+    <div id="slider-container" role="region" aria-label="Artist cards">
+      <div id="slider-track" aria-live="polite"></div>
+      
+      <!-- Navigation arrows -->
+      <div id="slider-arrows" aria-hidden="true">
+        <button class="arrow-btn" id="prev-btn" aria-label="Previous artist">‹</button>
+        <button class="arrow-btn" id="next-btn" aria-label="Next artist">›</button>
       </div>
     </div>
-    <button class="nav-btn next" onclick="nextArtist()">›</button>
-  </div>
 
-  <!-- Тулбар языка -->
-  <div id="lang-toolbar" class="toolbar">
-    <button onclick="setLanguage('kz')">🇰🇿 Қаз</button>
-    <button onclick="setLanguage('ru')">🇷🇺 Рус</button>
-    <button onclick="setLanguage('en')">🇺🇸 Eng</button>
-  </div>
+    <!-- Progress dots -->
+    <div id="slider-dots" role="tablist" aria-label="Artist navigation"></div>
+    
+  </section>
 
-  <!-- Кнопка назад -->
-  <button id="back-btn" class="back-btn" onclick="goBack()" style="display: none;">
-    ← Назад к художникам
-  </button>
+  <!-- =========================================
+       VIEW 2: 3D MUSEUM ROOM
+       ========================================= -->
+  <section id="room-view" class="view" aria-label="3D museum room">
 
-  <!-- 3D сцена -->
-  <a-scene id="main-scene" style="display: none;" background="color: #1a1a1a">
-  </a-scene>
+    <!-- A-Frame scene container (populated by JS) -->
+    <div id="aframe-container"></div>
 
-  <script src="script.js"></script>
+    <!-- Room UI overlay -->
+    <div id="room-ui">
+      
+      <!-- Back button -->
+      <button id="back-btn" aria-label="Back to gallery">
+        ← <span id="back-label">Артқа</span>
+      </button>
+
+      <!-- Gyroscope hint (auto-fades) -->
+      <div id="gyro-hint" role="tooltip" aria-hidden="true">
+        📱 Бейнені айналдыр<br>
+        <small>Rotate to explore</small>
+      </div>
+
+      <!-- Artist name label (bottom) -->
+      <div id="room-label" aria-live="polite">
+        <div id="room-label-name">—</div>
+        <div id="room-label-years"></div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ==========================================
+     APP SCRIPT (ES6 module)
+     ========================================== -->
+<script type="module" src="js/app.js"></script>
+
 </body>
 </html>
