@@ -413,10 +413,10 @@ function createOrbit(camera, canvas) {
     gyroBase: null,
   };
 
-  var SENS  = 0.006;
-  var DAMP  = 0.84;
-  var PHMIN = 0.28;
-  var PHMAX = Math.PI - 0.28;
+  var SENS  = 0.010;   // чувствительность свайпа (было 0.006)
+  var DAMP  = 0.80;   // инерция
+  var PHMIN = 0.05;   // почти потолок (было 0.28)
+  var PHMAX = Math.PI - 0.05; // почти пол (было 0.28)
 
   // Список слушателей для cleanup
   var listeners = [];
@@ -432,7 +432,10 @@ function createOrbit(camera, canvas) {
     o.lastX = e.touches[0].clientX;
     o.lastY = e.touches[0].clientY;
     o.vTheta = 0; o.vPhi = 0;
-    o.gyroBase = null; // сбрасываем базу гироскопа при касании
+    // Синхронизируем гиро-цель с текущим положением — нет рывка при отрыве
+    o.gyroTarget.theta = o.theta;
+    o.gyroTarget.phi   = o.phi;
+    o.useGyroNow = false;
   }, { passive: true });
 
   add(canvas, 'touchmove', function(e) {
@@ -449,7 +452,11 @@ function createOrbit(camera, canvas) {
     o.lastY  = e.touches[0].clientY;
   }, { passive: false }); // НЕ passive — нужен preventDefault
 
-  add(canvas, 'touchend',    function() { o.down = false; o.touchDown = false; }, { passive: true });
+  add(canvas, 'touchend', function() {
+    o.down = false; o.touchDown = false;
+    // Сбрасываем gyroBase — гироскоп возьмёт текущую позицию как новую точку отсчёта
+    o.gyroBase = null;
+  }, { passive: true });
   add(canvas, 'touchcancel', function() { o.down = false; o.touchDown = false; o.vTheta = 0; o.vPhi = 0; }, { passive: true });
 
   // --- MOUSE (десктоп) ---
@@ -473,16 +480,24 @@ function createOrbit(camera, canvas) {
   canvas.style.cursor = 'grab';
 
   // --- ГИРОСКОП ---
+  // Гироскоп пишет только в gyroTarget — update() делает lerp
+  // При touchDown флаг useGyroNow = false — touch управляет напрямую
+  o.gyroTarget = { theta: 0, phi: Math.PI / 2 };
+  o.useGyroNow = false;
+
   var onOrientation = function(e) {
-    if (o.touchDown || !o.gyroOn || e.beta == null) return;
+    if (!o.gyroOn || e.beta == null) return;
     if (o.gyroBase === null) {
       o.gyroBase = { beta: e.beta, gamma: e.gamma || 0 };
       return;
     }
+    // Пересчитываем цель гироскопа — не трогаем o.theta/o.phi напрямую
     var dG = (e.gamma || 0) - o.gyroBase.gamma;
     var dB = e.beta         - o.gyroBase.beta;
-    o.theta = -dG * (Math.PI / 180) * 1.1;
-    o.phi   = Math.max(PHMIN, Math.min(PHMAX, Math.PI/2 - dB * (Math.PI/180) * 0.7));
+    o.gyroTarget.theta = -dG * (Math.PI / 180) * 1.1;
+    o.gyroTarget.phi   = Math.max(PHMIN, Math.min(PHMAX, Math.PI/2 - dB * (Math.PI/180) * 0.7));
+    // Включаем гиро-режим только когда палец НЕ на экране
+    o.useGyroNow = !o.touchDown;
   };
   add(window, 'deviceorientation', onOrientation);
 
@@ -502,7 +517,16 @@ function createOrbit(camera, canvas) {
 
   return {
     update: function() {
-      if (!o.down) {
+      if (o.down) {
+        // Пока палец на экране — инерция не накапливается, гиро игнорируется
+      } else if (o.useGyroNow) {
+        // Гироскоп-режим: плавно двигаемся к gyroTarget (lerp)
+        var lerpSpeed = 0.12;
+        o.theta += (o.gyroTarget.theta - o.theta) * lerpSpeed;
+        o.phi   += (o.gyroTarget.phi   - o.phi)   * lerpSpeed;
+        o.vTheta = 0; o.vPhi = 0; // гасим инерцию touch
+      } else {
+        // Touch-инерция: докатываемся после отрыва пальца
         o.theta  += o.vTheta; o.phi += o.vPhi;
         o.vTheta *= DAMP;     o.vPhi *= DAMP;
         if (Math.abs(o.vTheta) < 0.0001) o.vTheta = 0;
