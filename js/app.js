@@ -60,16 +60,82 @@ let state = {
 let dom = {};
 
 // ============================================================
+// ВСТРОЕННЫЕ ДАННЫЕ — fallback если fetch не работает
+// (file:// протокол, CORS, нет сервера)
+// CUSTOMIZE: редактируй оба места — здесь и в data/artists.json
+// ============================================================
+const ARTISTS_FALLBACK = [
+  {
+    id: 'telzhanov', years: '1918 – 1979', color: '#c4843a',
+    name: { kz: 'Меңдіқали Тельжанов', ru: 'Мендикали Тельжанов', en: 'Mendikali Telzhanov' },
+    bio: {
+      kz: 'Қазақ реализмінің негізін қалаушы, оның табиғат пен халық тұрмысын бейнелеген шығармалары ұлттық суреттің алтын қорына енді.',
+      ru: 'Основоположник казахского реализма, его работы о природе и быте народа вошли в золотой фонд национальной живописи.',
+      en: 'Pioneer of Kazakh realism, his depictions of nature and daily life became cornerstones of national painting heritage.',
+    },
+    thumb: 'assets/images/thumbs/telzhanov_thumb.jpg',
+    infographic: { kz: 'assets/images/infographics/telzhanov_kz.jpg', ru: 'assets/images/infographics/telzhanov_ru.jpg', en: 'assets/images/infographics/telzhanov_en.jpg' },
+  },
+  {
+    id: 'galimbayeva', years: '1917 – 1991', color: '#7a5c9e',
+    name: { kz: 'Айша Ғалымбаева', ru: 'Айша Галимбаева', en: 'Aisha Galimbayeva' },
+    bio: {
+      kz: 'Қазақстандағы алғашқы кәсіби әйел суретші. Оның портреттері мен тарихи туындылары замандастарының рухын жеткізеді.',
+      ru: 'Первая профессиональная художница Казахстана. Её портреты и исторические полотна передают дух эпохи.',
+      en: 'The first professional female artist of Kazakhstan. Her portraits and historical canvases capture the spirit of her era.',
+    },
+    thumb: 'assets/images/thumbs/galimbayeva_thumb.jpg',
+    infographic: { kz: 'assets/images/infographics/galimbayeva_kz.jpg', ru: 'assets/images/infographics/galimbayeva_ru.jpg', en: 'assets/images/infographics/galimbayeva_en.jpg' },
+  },
+  {
+    id: 'mullashev', years: '1922 – 2001', color: '#3a7a5c',
+    name: { kz: 'Хакімжан Мулдашев', ru: 'Хакимжан Мулдашев', en: 'Khakimzhan Muldashev' },
+    bio: {
+      kz: 'Монументалды туындылармен атағы шыққан шебер — оның мозаикалары мен фрескалары жер бетінде бүгін де тұр.',
+      ru: 'Мастер монументального искусства — его мозаики и фрески сохранились в архитектуре страны по сей день.',
+      en: "Master of monumental art — his mosaics and frescoes remain embedded in the country's architecture to this day.",
+    },
+    thumb: 'assets/images/thumbs/mullashev_thumb.jpg',
+    infographic: { kz: 'assets/images/infographics/mullashev_kz.jpg', ru: 'assets/images/infographics/mullashev_ru.jpg', en: 'assets/images/infographics/mullashev_en.jpg' },
+  },
+  {
+    id: 'ismailova', years: '1929 – 2017', color: '#c44a4a',
+    name: { kz: 'Гүлфайрус Ысмайылова', ru: 'Гульфайрус Исмаилова', en: 'Gulfairous Ismailova' },
+    bio: {
+      kz: 'Декоративті-қолданбалы өнер мен кескіндеменің синтезін жасаған суретші, халық мотивтерін заманауи тілге аударды.',
+      ru: 'Художница, синтезировавшая декоративное искусство и живопись, переведя народные мотивы на современный язык.',
+      en: 'Artist who synthesized decorative arts and painting, translating folk motifs into a contemporary visual language.',
+    },
+    thumb: 'assets/images/thumbs/ismailova_thumb.jpg',
+    infographic: { kz: 'assets/images/infographics/ismailova_kz.jpg', ru: 'assets/images/infographics/ismailova_ru.jpg', en: 'assets/images/infographics/ismailova_en.jpg' },
+  },
+  {
+    id: 'kasteev', years: '1904 – 1973', color: '#4a6e9e',
+    name: { kz: 'Әбілхан Қастеев', ru: 'Абильхан Кастеев', en: 'Abilkhan Kasteev' },
+    bio: {
+      kz: 'Қазақ кәсіби кескіндемесінің атасы деп аталады. Оның пейзаждары мен тарихи суреттері ұлттық мұражайдың шедеврлері.',
+      ru: 'Признан отцом казахской профессиональной живописи. Его пейзажи и исторические картины — шедевры национального музея.',
+      en: 'Recognized as the father of Kazakh professional painting. His landscapes and historical works are masterpieces of the national museum.',
+    },
+    thumb: 'assets/images/thumbs/kasteev_thumb.jpg',
+    infographic: { kz: 'assets/images/infographics/kasteev_kz.jpg', ru: 'assets/images/infographics/kasteev_ru.jpg', en: 'assets/images/infographics/kasteev_en.jpg' },
+  },
+];
+
+// ============================================================
 // FETCH ARTISTS DATA
+// Пробует JSON, при ошибке — встроенный fallback (file:// safe)
 // ============================================================
 async function loadArtists() {
   try {
-    const res  = await fetch('data/artists.json');
+    const res = await fetch('data/artists.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    return data.artists;
+    if (Array.isArray(data.artists) && data.artists.length > 0) return data.artists;
+    throw new Error('empty');
   } catch (e) {
-    console.error('Failed to load artists.json', e);
-    return [];
+    console.warn('artists.json недоступен, используем fallback:', e.message);
+    return ARTISTS_FALLBACK;
   }
 }
 
@@ -712,7 +778,16 @@ async function init() {
   // Load data
   state.artists = await loadArtists();
 
+  // Защита — если данные не загрузились даже из fallback
+  if (!state.artists || state.artists.length === 0) {
+    document.getElementById('loader').innerHTML =
+      '<div style="color:#c4843a;font-family:serif;text-align:center;padding:20px">' +
+      'Ошибка загрузки данных.<br><small>Откройте через локальный сервер или GitHub Pages</small></div>';
+    return;
+  }
+
   // Build UI
+  state.lang = 'ru'; // устанавливаем язык ДО buildSlider
   buildSlider();
   initSwipe();
   setLang('ru');
