@@ -400,208 +400,253 @@ function destroyRoom() {
 }
 
 // ============================================================
-// ORBIT CONTROLS — мобильный, pinch-zoom, без утечек
+// ORBIT + QUATERNION GYRO CONTROLS
+// Гироскоп через кватернионы — нет gimbal lock, нативное ощущение
+// Touch-drag как смещение поверх гироскопа, pinch-zoom
 // ============================================================
 function createOrbit(camera, canvas) {
-  var o = {
-    theta: 0,
-    phi: Math.PI / 2,   // PI/2 = смотрим прямо вперёд
-    vTheta: 0, vPhi: 0,
-    lastX: 0, lastY: 0,
-    down: false,
-    touchDown: false,
-    gyroOn: false,
-    gyroBase: null,
-    gyroTarget: { theta: 0, phi: Math.PI / 2 },
-    useGyroNow: false,
-    // Zoom (FOV)
-    fov: 65,            // текущий FOV
-    pinchDist: 0,       // расстояние между пальцами в начале pinch
-    isPinch: false,
-  };
 
-  var SENS   = 0.010;
-  var DAMP   = 0.80;
-  // Вертикаль: 0.15 (почти потолок) … PI-0.15 (почти пол)
-  // НЕ трогать 0 и PI — там singularity и камера переворачивается!
-  var PHMIN  = 0.15;
-  var PHMAX  = Math.PI - 0.15;
-  var FOV_MIN = 20;    // максимальный зум (4x от 65°)
-  var FOV_MAX = 65;    // нормальный вид
+  var FOV_DEF = 65;   // начальный FOV
+  var FOV_MIN = 20;   // максимальный зум (~3x)
+  var FOV_MAX = 65;
+  var SENS    = 0.010; // чувствительность drag
+  var DAMP    = 0.82;  // затухание инерции
+
+  // --- Состояние ---
+  var fov       = FOV_DEF;
+  var vX = 0, vY = 0;          // инерция drag
+  var dragOffX  = 0;            // смещение от drag поверх гиро (радианы)
+  var dragOffY  = 0;
+  var lastX = 0, lastY = 0;
+  var isDown    = false;
+  var isTouching = false;
+  var isPinch   = false;
+  var lastPinch = 0;
+
+  // Кватернион ориентации устройства (гироскоп)
+  var Q      = new THREE.Quaternion();   // итоговая ориентация
+  var QGyro  = new THREE.Quaternion();   // от гироскопа
+  var QDrag  = new THREE.Quaternion();   // смещение от drag
+  var QBase  = new THREE.Quaternion();   // базовая ориентация при захвате drag
+
+  // Для конвертации DeviceOrientation → кватернион
+  // Используем метод из оригинального DeviceOrientationControls THREE.js
+  var zee     = new THREE.Vector3(0, 0, 1);
+  var euler   = new THREE.Euler();
+  var q0      = new THREE.Quaternion();
+  var q1      = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+  // q1 — поворот -90° вокруг X: из системы координат устройства в Three.js
+
+  var gyroActive = false;
+  var hasGyro    = false;
+
+  // Начальный взгляд вперёд (без гироскопа): phi=PI/2, theta=0
+  var fallTheta = 0;
+  var fallPhi   = Math.PI / 2;
 
   var listeners = [];
-  function add(el, type, fn, opt) {
+  function on(el, type, fn, opt) {
     el.addEventListener(type, fn, opt);
     listeners.push([el, type, fn, opt]);
   }
 
-  // Расстояние между двумя касаниями
-  function pinchDist(e) {
+  // ── PINCH DISTANCE ──────────────────────────────────────────
+  function getPinchDist(e) {
     var dx = e.touches[0].clientX - e.touches[1].clientX;
     var dy = e.touches[0].clientY - e.touches[1].clientY;
     return Math.sqrt(dx*dx + dy*dy);
   }
 
-  // --- TOUCH START ---
-  add(canvas, 'touchstart', function(e) {
+  // ── TOUCH START ──────────────────────────────────────────────
+  on(canvas, 'touchstart', function(e) {
     e.preventDefault();
-
     if (e.touches.length === 2) {
-      // Начало pinch-zoom — запоминаем расстояние
-      o.isPinch    = true;
-      o.down       = false;
-      o.touchDown  = false;
-      o.pinchDist  = pinchDist(e);
+      isPinch    = true;
+      isDown     = false;
+      isTouching = true;
+      lastPinch  = getPinchDist(e);
       return;
     }
-
     if (e.touches.length === 1) {
-      o.isPinch   = false;
-      o.down      = true;
-      o.touchDown = true;
-      o.lastX     = e.touches[0].clientX;
-      o.lastY     = e.touches[0].clientY;
-      o.vTheta    = 0;
-      o.vPhi      = 0;
-      // Синхронизируем гиро-цель — нет рывка при отрыве
-      o.gyroTarget.theta = o.theta;
-      o.gyroTarget.phi   = o.phi;
-      o.useGyroNow = false;
+      isPinch    = false;
+      isDown     = true;
+      isTouching = true;
+      lastX      = e.touches[0].clientX;
+      lastY      = e.touches[0].clientY;
+      vX = 0; vY = 0;
+      // Запоминаем текущую ориентацию камеры как базу для drag-смещения
+      QBase.copy(Q);
+      QDrag.identity();
     }
   }, { passive: false });
 
-  // --- TOUCH MOVE ---
-  add(canvas, 'touchmove', function(e) {
+  // ── TOUCH MOVE ───────────────────────────────────────────────
+  on(canvas, 'touchmove', function(e) {
     e.preventDefault();
 
-    // PINCH-ZOOM (два пальца)
+    // PINCH-ZOOM
     if (e.touches.length === 2) {
-      o.isPinch = true;
-      o.down    = false;
-      var dist  = pinchDist(e);
-      var delta = o.pinchDist - dist;   // >0 = пальцы сближаются = zoom out
-      o.fov     = Math.max(FOV_MIN, Math.min(FOV_MAX, o.fov + delta * 0.15));
-      camera.fov = o.fov;
+      isPinch = true; isDown = false;
+      var d   = getPinchDist(e);
+      var delta = lastPinch - d;         // >0 = zoom out
+      fov     = Math.max(FOV_MIN, Math.min(FOV_MAX, fov + delta * 0.15));
+      camera.fov = fov;
       camera.updateProjectionMatrix();
-      o.pinchDist = dist;
+      lastPinch = d;
       return;
     }
 
-    // ORBIT (один палец)
-    if (!o.down || e.touches.length !== 1 || o.isPinch) return;
-    var dx = e.touches[0].clientX - o.lastX;
-    var dy = e.touches[0].clientY - o.lastY;
+    // DRAG (1 палец)
+    if (!isDown || isPinch) return;
+    var dx = e.touches[0].clientX - lastX;
+    var dy = e.touches[0].clientY - lastY;
 
-    o.vTheta  =  dx * SENS;
-    o.vPhi    = -dy * SENS;
-    o.theta  += o.vTheta;
+    vX = dx * SENS;
+    vY = dy * SENS;
 
-    // Зажимаем phi СТРОГО чтобы никогда не выйти за [PHMIN, PHMAX]
-    o.phi = Math.max(PHMIN, Math.min(PHMAX, o.phi + o.vPhi));
+    if (gyroActive) {
+      // В гиро-режиме: drag накапливает смещение поверх гироскопа
+      dragOffX -= dx * SENS;
+      dragOffY += dy * SENS;
+      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY)); // ±70°
+    } else {
+      // Без гироскопа: обычный look-around
+      fallTheta -= dx * SENS;
+      fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + dy * SENS));
+    }
 
-    o.lastX = e.touches[0].clientX;
-    o.lastY = e.touches[0].clientY;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
   }, { passive: false });
 
-  // --- TOUCH END ---
-  add(canvas, 'touchend', function(e) {
-    o.isPinch   = false;
-    o.down      = false;
-    o.touchDown = false;
-    // После касания гироскоп берёт текущее положение как базу — нет прыжка
-    o.gyroBase  = null;
+  // ── TOUCH END ────────────────────────────────────────────────
+  on(canvas, 'touchend', function() {
+    isPinch    = false;
+    isDown     = false;
+    isTouching = false;
   }, { passive: true });
 
-  add(canvas, 'touchcancel', function() {
-    o.isPinch = false; o.down = false; o.touchDown = false;
-    o.vTheta  = 0;     o.vPhi = 0;
+  on(canvas, 'touchcancel', function() {
+    isPinch = false; isDown = false; isTouching = false;
+    vX = 0; vY = 0;
   }, { passive: true });
 
-  // --- MOUSE (десктоп) ---
-  add(canvas, 'mousedown', function(e) {
-    o.down = true; o.lastX = e.clientX; o.lastY = e.clientY;
-    o.vTheta = 0; o.vPhi = 0;
+  // ── MOUSE (десктоп) ──────────────────────────────────────────
+  on(canvas, 'mousedown', function(e) {
+    isDown = true;
+    lastX  = e.clientX; lastY = e.clientY;
+    vX = 0; vY = 0;
     canvas.style.cursor = 'grabbing';
   });
-  // Колёсико мыши = zoom на десктопе
-  add(canvas, 'wheel', function(e) {
+  on(canvas, 'wheel', function(e) {
     e.preventDefault();
-    o.fov = Math.max(FOV_MIN, Math.min(FOV_MAX, o.fov + e.deltaY * 0.05));
-    camera.fov = o.fov;
+    fov = Math.max(FOV_MIN, Math.min(FOV_MAX, fov + e.deltaY * 0.05));
+    camera.fov = fov;
     camera.updateProjectionMatrix();
   }, { passive: false });
-
-  var mmove = function(e) {
-    if (!o.down) return;
-    var dx = e.clientX - o.lastX, dy = e.clientY - o.lastY;
-    o.vTheta =  dx * SENS * 0.7;
-    o.vPhi   = -dy * SENS * 0.7;
-    o.theta += o.vTheta;
-    o.phi    = Math.max(PHMIN, Math.min(PHMAX, o.phi + o.vPhi));
-    o.lastX  = e.clientX; o.lastY = e.clientY;
+  var onMM = function(e) {
+    if (!isDown) return;
+    var dx = e.clientX - lastX, dy = e.clientY - lastY;
+    vX = dx * SENS * 0.7; vY = dy * SENS * 0.7;
+    if (gyroActive) {
+      dragOffX -= dx * SENS * 0.7;
+      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY + dy * SENS * 0.7));
+    } else {
+      fallTheta -= dx * SENS * 0.7;
+      fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + dy * SENS * 0.7));
+    }
+    lastX = e.clientX; lastY = e.clientY;
   };
-  var mup = function() { o.down = false; canvas.style.cursor = 'grab'; };
-  add(document, 'mousemove', mmove);
-  add(document, 'mouseup',   mup);
+  var onMU = function() { isDown = false; canvas.style.cursor = 'grab'; };
+  on(document, 'mousemove', onMM);
+  on(document, 'mouseup',   onMU);
   canvas.style.cursor = 'grab';
 
-  // --- ГИРОСКОП ---
-  var onOrientation = function(e) {
-    if (!o.gyroOn || e.beta == null) return;
-    if (o.gyroBase === null) {
-      o.gyroBase = { beta: e.beta, gamma: e.gamma || 0 };
-      return;
-    }
-    var dG = (e.gamma || 0) - o.gyroBase.gamma;
-    var dB = e.beta - o.gyroBase.beta;
-    o.gyroTarget.theta = -dG * (Math.PI / 180) * 1.1;
-    o.gyroTarget.phi   = Math.max(PHMIN, Math.min(PHMAX,
-      Math.PI/2 - dB * (Math.PI/180) * 0.7));
-    o.useGyroNow = !o.touchDown;
-  };
-  add(window, 'deviceorientation', onOrientation);
+  // ── ГИРОСКОП — кватернионный ─────────────────────────────────
+  // Точная копия алгоритма из DeviceOrientationControls three.js r128
+  // alpha = компас (Z), beta = перёд/назад (X), gamma = лево/право (Y)
+  var screenQuat = new THREE.Quaternion();
+  var onOrient = function(e) {
+    if (!hasGyro || e.alpha == null) return;
 
-  if (typeof DeviceOrientationEvent !== 'undefined') {
+    var alpha  = e.alpha  ? THREE.MathUtils.degToRad(e.alpha)  : 0;
+    var beta   = e.beta   ? THREE.MathUtils.degToRad(e.beta)   : 0;
+    var gamma  = e.gamma  ? THREE.MathUtils.degToRad(e.gamma)  : 0;
+    var orient = window.screen && window.screen.orientation && window.screen.orientation.angle
+                 ? THREE.MathUtils.degToRad(window.screen.orientation.angle) : 0;
+
+    // Стандартный алгоритм DeviceOrientationControls
+    euler.set(beta, alpha, -gamma, 'YXZ');
+    QGyro.setFromEuler(euler);
+    QGyro.multiply(q1);       // поворачиваем из системы устройства в Three.js
+    q0.setFromAxisAngle(zee, -orient); // компенсируем поворот экрана
+    QGyro.multiply(q0);
+
+    gyroActive = true;
+  };
+  on(window, 'deviceorientation', onOrient);
+
+  // iOS 13+ — запрашиваем разрешение при первом тапе
+  function tryEnableGyro() {
+    if (typeof DeviceOrientationEvent === 'undefined') return;
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      add(canvas, 'touchend', function reqGyro() {
-        DeviceOrientationEvent.requestPermission().then(function(p) {
-          if (p === 'granted') { o.gyroOn = true; o.gyroBase = null; }
-        }).catch(function() {});
-        canvas.removeEventListener('touchend', reqGyro);
+      // iOS — нужен жест пользователя
+      on(canvas, 'touchend', function askPerm() {
+        DeviceOrientationEvent.requestPermission()
+          .then(function(r) { if (r === 'granted') hasGyro = true; })
+          .catch(function() {});
+        canvas.removeEventListener('touchend', askPerm);
       }, { passive: true });
     } else {
-      o.gyroOn = true; o.gyroBase = null;
+      // Android, обычный Safari
+      hasGyro = true;
     }
   }
+  tryEnableGyro();
 
+  // ── UPDATE (каждый кадр) ─────────────────────────────────────
   return {
     update: function() {
-      if (!o.down && !o.isPinch) {
-        if (o.useGyroNow) {
-          // Гиро-режим: lerp к цели
-          o.theta += (o.gyroTarget.theta - o.theta) * 0.12;
-          o.phi   += (o.gyroTarget.phi   - o.phi)   * 0.12;
-          o.vTheta = 0; o.vPhi = 0;
-        } else {
-          // Touch-инерция после отрыва
-          o.theta += o.vTheta;
-          o.phi    = Math.max(PHMIN, Math.min(PHMAX, o.phi + o.vPhi));
-          o.vTheta *= DAMP; o.vPhi *= DAMP;
-          if (Math.abs(o.vTheta) < 0.0001) o.vTheta = 0;
-          if (Math.abs(o.vPhi)   < 0.0001) o.vPhi   = 0;
-        }
-      }
 
-      // Камера смотрит в точку на единичной сфере вокруг себя
-      var R  = 3.0;
-      var sp = Math.sin(o.phi);
-      var cp = Math.cos(o.phi);
-      var st = Math.sin(o.theta);
-      var ct = Math.cos(o.theta);
-      // sp всегда >= sin(0.15) ≈ 0.15 — singularity невозможна
-      camera.position.set(0, 1.62, 0);
-      camera.lookAt(sp * st * R, 1.62 + cp * R * 0.5, -sp * ct * R);
+      if (gyroActive && hasGyro) {
+        // ── РЕЖИМ ГИРОСКОПА ──
+        // QGyro уже содержит правильную ориентацию устройства
+        // Поверх него накладываем drag-смещение (горизонталь + вертикаль)
+        var qH = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0), dragOffX);
+        var qV = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(1, 0, 0), dragOffY);
+        Q.copy(QGyro).multiply(qH).multiply(qV);
+
+        // Инерция drag
+        if (!isDown) {
+          dragOffX -= vX * 0.3; vX *= DAMP;
+          dragOffY += vY * 0.3; vY *= DAMP;
+          dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY));
+          if (Math.abs(vX) < 0.0001) vX = 0;
+          if (Math.abs(vY) < 0.0001) vY = 0;
+        }
+
+        camera.position.set(0, 1.62, 0);
+        camera.quaternion.copy(Q);
+
+      } else {
+        // ── РЕЖИМ БЕЗ ГИРОСКОПА (drag-look-around) ──
+        if (!isDown) {
+          fallTheta -= vX; vX *= DAMP;
+          fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + vY));
+          vY *= DAMP;
+          if (Math.abs(vX) < 0.0001) vX = 0;
+          if (Math.abs(vY) < 0.0001) vY = 0;
+        }
+        var R  = 3.0;
+        var sp = Math.sin(fallPhi), cp = Math.cos(fallPhi);
+        var st = Math.sin(fallTheta), ct = Math.cos(fallTheta);
+        camera.position.set(0, 1.62, 0);
+        camera.lookAt(sp * st * R, 1.62 + cp * R * 0.5, -sp * ct * R);
+      }
     },
+
     destroy: function() {
       listeners.forEach(function(l) { l[0].removeEventListener(l[1], l[2], l[3]); });
       listeners = [];
@@ -610,6 +655,8 @@ function createOrbit(camera, canvas) {
   };
 }
 
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================
