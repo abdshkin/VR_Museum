@@ -478,7 +478,7 @@ body {
   z-index: 20;
 }
 
-#back-btn {
+#room-back-btn {
   position: absolute;
   top: calc(var(--safe-top) + 12px);
   left: 16px;
@@ -500,7 +500,7 @@ body {
   cursor: pointer;
   transition: var(--trans-fast);
 }
-#back-btn:hover { background: rgba(212,168,83,0.12); border-color: var(--gold); }
+#room-back-btn:hover { background: rgba(212,168,83,0.12); border-color: var(--gold); }
 
 #room-label {
   position: absolute;
