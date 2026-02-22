@@ -292,9 +292,124 @@ function goBack() {
 }
 
 // ============================================================
-// 3D ЗАЛ — Three.js
+// 3D ЗАЛ — Three.js (улучшенная версия)
 // ============================================================
+
 var threeCtx = null;
+
+// ── Вспомогательные материалы ──────────────────────────────
+
+function disposeMesh(mesh) {
+  if (!mesh) return;
+  if (mesh.geometry) mesh.geometry.dispose();
+  if (Array.isArray(mesh.material)) {
+    mesh.material.forEach(function(m) { m.dispose(); });
+  } else if (mesh.material) {
+    mesh.material.dispose();
+  }
+}
+
+function disposeGroup(group) {
+  group.traverse(function(obj) {
+    if (obj.isMesh) disposeMesh(obj);
+  });
+}
+
+// ── Процедурная текстура паркета ───────────────────────────
+
+function makeParquetTexture(size) {
+  size = size || 512;
+  var canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  var ctx = canvas.getContext('2d');
+  var plankW = size / 4, plankH = size / 8;
+
+  for (var row = 0; row < 8; row++) {
+    for (var col = 0; col < 4; col++) {
+      var base = (row + col) % 2 === 0 ? 48 : 38;
+      var r = base + Math.floor(Math.random() * 12);
+      var g = Math.floor(r * 0.62);
+      var b = Math.floor(r * 0.32);
+      ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+      ctx.fillRect(col * plankW, row * plankH, plankW, plankH);
+
+      // Волокна древесины
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+      ctx.lineWidth = 0.5;
+      for (var fi = 0; fi < 6; fi++) {
+        var fy = row * plankH + (fi / 6) * plankH;
+        ctx.beginPath();
+        ctx.moveTo(col * plankW, fy + Math.random() * 4 - 2);
+        ctx.lineTo(col * plankW + plankW, fy + Math.random() * 4 - 2);
+        ctx.stroke();
+      }
+
+      // Щели
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(col * plankW + 0.6, row * plankH + 0.6, plankW - 1.2, plankH - 1.2);
+    }
+  }
+  var tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 4);
+  return tex;
+}
+
+// ── Процедурная текстура стены ─────────────────────────────
+
+function makeWallTexture(size) {
+  size = size || 512;
+  var canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#2a2018';
+  ctx.fillRect(0, 0, size, size);
+
+  // Тонкие горизонтальные полосы — имитация фактуры штукатурки
+  for (var i = 0; i < size; i += 4) {
+    var alpha = Math.random() * 0.04;
+    ctx.fillStyle = 'rgba(255,220,160,' + alpha + ')';
+    ctx.fillRect(0, i, size, 2);
+  }
+  var tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 1);
+  return tex;
+}
+
+// ── Текстура ковра ─────────────────────────────────────────
+
+function makeRugTexture(color, size) {
+  size = size || 256;
+  var canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  var ctx = canvas.getContext('2d');
+  var c = new THREE.Color(color || '#7a1a1a');
+  ctx.fillStyle = 'rgb(' + Math.round(c.r*180) + ',' + Math.round(c.g*80) + ',' + Math.round(c.b*80) + ')';
+  ctx.fillRect(0, 0, size, size);
+
+  // Узор — простая геометрия
+  ctx.strokeStyle = 'rgba(220,180,80,0.5)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(12, 12, size - 24, size - 24);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(20, 20, size - 40, size - 40);
+
+  // Диагональная штриховка по краям
+  for (var d = 0; d < size; d += 14) {
+    ctx.beginPath();
+    ctx.moveTo(0, d); ctx.lineTo(d, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(size, d); ctx.lineTo(d, size);
+    ctx.stroke();
+  }
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+// ── Основная функция ───────────────────────────────────────
 
 function buildRoom(artist) {
   destroyRoom();
@@ -303,75 +418,254 @@ function buildRoom(artist) {
   var W = container.clientWidth  || window.innerWidth;
   var H = container.clientHeight || window.innerHeight;
 
+  // Renderer
   var renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(W, H);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+  renderer.toneMapping       = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
   container.appendChild(renderer.domElement);
 
+  // Scene
   var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1510);
-  scene.fog = new THREE.Fog(0x1a1510, 8, 20);
+  scene.fog = new THREE.FogExp2(0x1a1510, 0.045);
 
-  var camera = new THREE.PerspectiveCamera(65, W / H, 0.1, 50);
-  camera.position.set(0, 1.62, 0);
+  // Camera
+  var camera = new THREE.PerspectiveCamera(65, W / H, 0.05, 60);
+  camera.position.set(0, 1.62, 2.5);
+  camera.lookAt(0, 1.62, -4);
 
-  // Свет
-  scene.add(new THREE.AmbientLight(0xfff5e0, 0.55));
-  var dir = new THREE.DirectionalLight(0xffe8c0, 1.3);
-  dir.position.set(2, 5, 3);
-  dir.castShadow = true;
-  scene.add(dir);
-  var pt = new THREE.PointLight(0xd4a853, 0.9, 8);
-  pt.position.set(0, 3.5, 0);
-  scene.add(pt);
+  // ── Освещение ──────────────────────────────────────────
+
+  // Ambient
+  var ambient = new THREE.AmbientLight(0xfff0d0, 0.4);
+  scene.add(ambient);
+
+  // Основной направленный свет (общее освещение зала)
+  var dirLight = new THREE.DirectionalLight(0xffe8c0, 0.8);
+  dirLight.position.set(0, 6, 2);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(1024, 1024);
+  dirLight.shadow.camera.near = 0.5;
+  dirLight.shadow.camera.far  = 20;
+  dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -6;
+  dirLight.shadow.camera.right = dirLight.shadow.camera.top   =  6;
+  scene.add(dirLight);
+
+  // Люстра — тёплая точечная лампа
+  var chandPt = new THREE.PointLight(0xffd890, 1.6, 10, 1.5);
+  chandPt.position.set(0, 3.8, -1);
+  chandPt.castShadow = true;
+  chandPt.shadow.mapSize.set(512, 512);
+  scene.add(chandPt);
+
+  // Прожектор над главной панелью
+  var spotMain = new THREE.SpotLight(0xfff5e0, 2.5, 7, Math.PI / 7, 0.3, 1.5);
+  spotMain.position.set(0, 4.0, -2.5);
+  spotMain.target.position.set(0, 2.2, -3.9);
+  spotMain.castShadow = true;
+  spotMain.shadow.mapSize.set(512, 512);
+  scene.add(spotMain);
+  scene.add(spotMain.target);
+
+  // Два боковых прожектора для картин
+  [-2.6, 2.6].forEach(function(x) {
+    var sp = new THREE.SpotLight(0xffeedd, 1.2, 5, Math.PI / 9, 0.5, 2);
+    sp.position.set(x > 0 ? 3.2 : -3.2, 4.0, -1.0);
+    sp.target.position.set(x > 0 ? 3.4 : -3.4, 2.0, -3.9);
+    sp.castShadow = false;
+    scene.add(sp);
+    scene.add(sp.target);
+  });
+
+  // ── Геометрия ──────────────────────────────────────────
+
+  var textures = []; // для dispose
+  var rW = 8, rH = 4.8, rD = 10;
+  var artColor = new THREE.Color(artist.color || '#c4843a');
 
   // Материалы
-  var mFloor = new THREE.MeshLambertMaterial({ color: 0x3d2f1e });
-  var mWall  = new THREE.MeshLambertMaterial({ color: 0x2a2018 });
-  var mCeil  = new THREE.MeshLambertMaterial({ color: 0x1e1a12 });
+  var parquetTex = makeParquetTexture(512);
+  textures.push(parquetTex);
+  var wallTex    = makeWallTexture(512);
+  textures.push(wallTex);
+
+  var mFloor = new THREE.MeshLambertMaterial({ map: parquetTex });
+  var mWall  = new THREE.MeshLambertMaterial({ map: wallTex });
+  var mCeil  = new THREE.MeshLambertMaterial({ color: 0x1c1810 });
   var mMold  = new THREE.MeshLambertMaterial({ color: 0xd4a853 });
-  var mFrame = new THREE.MeshLambertMaterial({ color: 0x8b6914 });
+  var mMoldD = new THREE.MeshLambertMaterial({ color: 0xb08830 });
+  var mFrame = new THREE.MeshLambertMaterial({ color: 0x7a5512 });
   var mDark  = new THREE.MeshLambertMaterial({ color: 0x1a1410 });
+  var mDarkMid = new THREE.MeshLambertMaterial({ color: 0x2e2418 });
+  var mGold  = new THREE.MeshLambertMaterial({ color: 0xe8c060 });
+  var mBench = new THREE.MeshLambertMaterial({ color: 0x3a2810 });
+  var mBenchLeather = new THREE.MeshLambertMaterial({ color: 0x5a1a10 });
 
-  var rW = 7, rH = 4.5, rD = 8;
+  // Группа всей комнаты
+  var roomGroup = new THREE.Group();
+  scene.add(roomGroup);
 
-  function box(w, h, d, x, y, z, mat, shadow) {
-    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-    m.position.set(x, y, z);
-    if (shadow) m.receiveShadow = true;
-    m.castShadow = true;
-    scene.add(m);
-    return m;
+  function addBox(w, h, d, x, y, z, mat, parent, shadow) {
+    var mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.set(x, y, z);
+    if (shadow !== false) { mesh.receiveShadow = true; mesh.castShadow = true; }
+    (parent || roomGroup).add(mesh);
+    return mesh;
   }
 
-  // Комната
-  box(rW, 0.05, rD,  0, 0,    0,      mFloor, true);
-  box(rW, 0.05, rD,  0, rH,   0,      mCeil);
-  box(rW, rH,   0.1, 0, rH/2, -rD/2,  mWall);
-  box(rW, rH,   0.1, 0, rH/2,  rD/2,  mWall);
-  box(0.1, rH,  rD, -rW/2, rH/2, 0,   mWall);
-  box(0.1, rH,  rD,  rW/2, rH/2, 0,   mWall);
+  function addCylinder(rt, rb, h, seg, x, y, z, mat, parent) {
+    var mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    (parent || roomGroup).add(mesh);
+    return mesh;
+  }
 
-  // Молдинги
-  box(rW, 0.06, 0.06, 0, 0.03,    -rD/2 + 0.05, mMold);
-  box(rW, 0.06, 0.06, 0, rH-0.03, -rD/2 + 0.05, mMold);
+  // ── Стены, пол, потолок ──────────────────────────────
 
-  // Инфографика или цветная заглушка
+  addBox(rW, 0.04, rD,   0,    -0.02,    0,       mFloor);           // пол
+  addBox(rW, 0.04, rD,   0,    rH,       0,       mCeil);            // потолок
+  addBox(rW, rH,   0.12, 0,    rH/2,    -rD/2,   mWall);            // передняя (главная)
+  addBox(rW, rH,   0.12, 0,    rH/2,     rD/2,   mWall);            // задняя
+  addBox(0.12, rH, rD,  -rW/2, rH/2,    0,       mWall);            // левая
+  addBox(0.12, rH, rD,   rW/2, rH/2,    0,       mWall);            // правая
+
+  // ── Плинтусы (8 штук по периметру) ──────────────────
+
+  var plinthH = 0.15, plinthD = 0.06;
+  // Горизонтальные по z
+  addBox(rW - 0.24, plinthH, plinthD, 0, plinthH/2, -rD/2 + 0.06, mMoldD);
+  addBox(rW - 0.24, plinthH, plinthD, 0, plinthH/2,  rD/2 - 0.06, mMoldD);
+  // Горизонтальные по x
+  addBox(plinthD, plinthH, rD - 0.24, -rW/2 + 0.06, plinthH/2, 0, mMoldD);
+  addBox(plinthD, plinthH, rD - 0.24,  rW/2 - 0.06, plinthH/2, 0, mMoldD);
+
+  // ── Карнизы потолка ──────────────────────────────────
+
+  var cornH = 0.12, cornD = 0.1;
+  addBox(rW, cornH, cornD, 0, rH - cornH/2, -rD/2 + cornD/2, mMold);
+  addBox(rW, cornH, cornD, 0, rH - cornH/2,  rD/2 - cornD/2, mMold);
+  addBox(cornD, cornH, rD, -rW/2 + cornD/2, rH - cornH/2, 0, mMold);
+  addBox(cornD, cornH, rD,  rW/2 - cornD/2, rH - cornH/2, 0, mMold);
+
+  // ── Молдинги — горизонтальный пояс на стенах ─────────
+
+  var mBelt = 0.05, mBeltH = 2.8;
+  addBox(rW, mBelt, mBelt, 0, mBeltH, -rD/2 + 0.07, mMold);
+  addBox(rW, mBelt, mBelt, 0, mBeltH,  rD/2 - 0.07, mMold);
+  addBox(mBelt, mBelt, rD, -rW/2 + 0.07, mBeltH, 0, mMold);
+  addBox(mBelt, mBelt, rD,  rW/2 - 0.07, mBeltH, 0, mMold);
+
+  // ── Ковёр ─────────────────────────────────────────────
+
+  var rugTex = makeRugTexture(artist.color, 256);
+  textures.push(rugTex);
+  var rugMat = new THREE.MeshLambertMaterial({ map: rugTex });
+  var rug = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.025, 5.5), rugMat);
+  rug.position.set(0, 0.012, 0);
+  rug.receiveShadow = true;
+  roomGroup.add(rug);
+
+  // ── Колонны ──────────────────────────────────────────
+
+  [-2.5, 2.5].forEach(function(x) {
+    [-rD/2 + 0.5, rD/2 - 0.5].forEach(function(z) {
+      // Основание
+      addBox(0.3, 0.12, 0.3, x, 0.06, z, mMoldD);
+      // Ствол
+      addCylinder(0.1, 0.11, rH - 0.24, 12, x, rH/2, z, mWall);
+      // Капитель
+      addBox(0.28, 0.15, 0.28, x, rH - 0.1, z, mMoldD);
+    });
+  });
+
+  // ── Люстра ───────────────────────────────────────────
+
+  var chandGroup = new THREE.Group();
+  chandGroup.position.set(0, rH, -1);
+  roomGroup.add(chandGroup);
+
+  // Цепь (несколько цилиндров)
+  for (var ci = 0; ci < 6; ci++) {
+    var chainM = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, 0.08, 6),
+      mGold
+    );
+    chainM.position.set(0, -0.06 - ci * 0.1, 0);
+    chandGroup.add(chainM);
+  }
+
+  // Корпус люстры
+  var chandBody = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.22, 0.2, 12), mGold);
+  chandBody.position.set(0, -0.65, 0);
+  chandGroup.add(chandBody);
+
+  // Свечи
+  var candleAngles = [0, Math.PI/2, Math.PI, Math.PI*3/2, Math.PI/4, Math.PI*3/4, Math.PI*5/4, Math.PI*7/4];
+  candleAngles.forEach(function(a) {
+    var radius = a % (Math.PI/2) === 0 ? 0.18 : 0.14;
+    var cx = Math.cos(a) * radius;
+    var cz = Math.sin(a) * radius;
+
+    // Держатель
+    var arm = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, radius, 4), mGold);
+    arm.rotation.z = Math.PI / 2;
+    arm.position.set(cx/2, -0.74, cz/2);
+    arm.rotation.y = -a;
+    chandGroup.add(arm);
+
+    // Свеча
+    var candle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.12, 8),
+      new THREE.MeshLambertMaterial({ color: 0xfffde8 }));
+    candle.position.set(cx, -0.68, cz);
+    chandGroup.add(candle);
+
+    // Огонёк
+    var flame = new THREE.Mesh(
+      new THREE.SphereGeometry(0.025, 6, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffcc44 })
+    );
+    flame.position.set(cx, -0.60, cz);
+    chandGroup.add(flame);
+  });
+
+  // ── Прожекторы-кронштейны над панелью ───────────────
+
+  [-0.8, 0.8].forEach(function(x) {
+    addBox(0.04, 0.04, 0.35, x, rH - 0.15, -rD/2 + 0.35, mDark);
+    var lampCone = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.15, 8), mDark);
+    lampCone.rotation.x = Math.PI;
+    lampCone.position.set(x, rH - 0.35, -rD/2 + 0.52);
+    roomGroup.add(lampCone);
+  });
+
+  // ── Главная панель (инфографика или заглушка) ─────────
+
   var infPath = artist.infographic && artist.infographic[S.lang]
     ? artist.infographic[S.lang] : null;
+
+  // Рамка главной панели
+  var framePad = 0.12;
+  var panW = 5.0, panH = 2.8;
+  addBox(panW + framePad*2, panH + framePad*2, 0.05,
+    0, 2.4, -rD/2 + 0.13, mFrame);
 
   if (infPath) {
     new THREE.TextureLoader().load(
       infPath,
       function(tex) {
-        var m = new THREE.Mesh(
-          new THREE.BoxGeometry(5, 2.6, 0.01),
+        textures.push(tex);
+        var panel = new THREE.Mesh(
+          new THREE.BoxGeometry(panW, panH, 0.02),
           new THREE.MeshLambertMaterial({ map: tex })
         );
-        m.position.set(0, 2.2, -rD/2 + 0.12);
-        scene.add(m);
+        panel.position.set(0, 2.4, -rD/2 + 0.17);
+        roomGroup.add(panel);
       },
       undefined,
       function() { fallbackPanel(); }
@@ -381,61 +675,205 @@ function buildRoom(artist) {
   }
 
   function fallbackPanel() {
-    box(4, 2.6, 0.01, 0, 2.2, -rD/2 + 0.12,
-      new THREE.MeshLambertMaterial({ color: new THREE.Color(artist.color || '#c4843a') }));
+    var c = artColor.clone().multiplyScalar(0.85);
+    addBox(panW, panH, 0.02, 0, 2.4, -rD/2 + 0.17,
+      new THREE.MeshLambertMaterial({ color: c }));
   }
 
-  // Полки и книги
-  box(0.05, 0.04, 1.2, -rW/2+0.79, 2.0, -1.5, mMold);
-  box(0.05, 0.04, 1.2, -rW/2+0.79, 1.3, -1.5, mMold);
-  var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080];
-  for (var bi = 0; bi < 5; bi++) {
-    var bw = 0.06 + (bi * 0.008), bh = 0.22 + (bi * 0.02);
-    box(bw, bh, 5, -rW/2+0.38+(bi*0.13), 2.0+bh/2, -1.5,
-      new THREE.MeshLambertMaterial({ color: bColors[bi] }));
-    box(bw, bh, 5, -rW/2+0.38+(bi*0.13), 1.3+bh/2, -1.5,
-      new THREE.MeshLambertMaterial({ color: bColors[(bi+2)%5] }));
+  // ── Картины на боковых стенах ─────────────────────────
+
+  function hangPainting(x, z, rotY, hue) {
+    var pW = 1.1, pH = 0.85;
+    var frameMesh = addBox(pW + 0.1, pH + 0.1, 0.04, x, 2.1, z, mFrame);
+    frameMesh.rotation.y = rotY;
+    var c = new THREE.Color().setHSL(hue, 0.5, 0.3);
+    var paintMat = new THREE.MeshLambertMaterial({ color: c });
+    var paint = new THREE.Mesh(new THREE.BoxGeometry(pW, pH, 0.02), paintMat);
+    paint.position.set(x, 2.1, z);
+    paint.rotation.y = rotY;
+    roomGroup.add(paint);
   }
 
-  // Пьедестал со сферой
-  box(0.4, 0.9, 0.4, 2.5, 0.45, -2.5, mDark, true);
-  var sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.18, 16, 16),
-    new THREE.MeshLambertMaterial({ color: new THREE.Color(artist.color || '#c4843a') })
-  );
-  sphere.position.set(2.5, 1.08, -2.5);
+  // Левая стена
+  hangPainting(-rW/2 + 0.07, -2.5, Math.PI/2, 0.08);
+  hangPainting(-rW/2 + 0.07,  0.5, Math.PI/2, 0.55);
+  hangPainting(-rW/2 + 0.07,  2.5, Math.PI/2, 0.75);
+  // Правая стена
+  hangPainting( rW/2 - 0.07, -2.5, -Math.PI/2, 0.12);
+  hangPainting( rW/2 - 0.07,  0.5, -Math.PI/2, 0.40);
+  hangPainting( rW/2 - 0.07,  2.5, -Math.PI/2, 0.65);
+
+  // ── Полки и книги ─────────────────────────────────────
+
+  var shelfGroup = new THREE.Group();
+  shelfGroup.position.set(-rW/2 + 0.06, 0, -1.5);
+  roomGroup.add(shelfGroup);
+
+  [1.9, 1.2].forEach(function(sy) {
+    var shelf = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 1.4), mMoldD);
+    shelf.position.set(0.78, sy, 0);
+    shelfGroup.add(shelf);
+  });
+
+  var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080, 0x883010, 0x308070];
+  [[1.9, 7], [1.2, 5]].forEach(function(pair, ri) {
+    var sy = pair[0], count = pair[1];
+    var zStart = -0.55;
+    for (var bi = 0; bi < count; bi++) {
+      var bw = 0.05 + Math.random() * 0.03;
+      var bh = 0.18 + Math.random() * 0.06;
+      var tilt = (Math.random() - 0.5) * 0.15;
+      var book = new THREE.Mesh(
+        new THREE.BoxGeometry(bw, bh, 0.13),
+        new THREE.MeshLambertMaterial({ color: bColors[(bi + ri * 3) % bColors.length] })
+      );
+      book.position.set(0.38 + bi * 0.13, sy + bh/2 + 0.02, zStart + bi * 0.04);
+      book.rotation.z = tilt;
+      shelfGroup.add(book);
+    }
+  });
+
+  // ── Скамейка для посетителей ──────────────────────────
+
+  var benchGroup = new THREE.Group();
+  benchGroup.position.set(0, 0, 1.2);
+  roomGroup.add(benchGroup);
+
+  // Сиденье
+  addBox(1.8, 0.07, 0.44, 0, 0.48, 0, mBench, benchGroup);
+  // Спинка
+  addBox(1.8, 0.55, 0.06, 0, 0.78, -0.22, mBench, benchGroup);
+  // Мягкая накладка
+  addBox(1.75, 0.04, 0.4, 0, 0.52, 0.01, mBenchLeather, benchGroup);
+  // Ножки
+  [[-0.78, -0.18], [-0.78, 0.18], [0.78, -0.18], [0.78, 0.18]].forEach(function(p) {
+    addBox(0.06, 0.46, 0.06, p[0], 0.23, p[1], mDarkMid, benchGroup);
+  });
+
+  // ── Пьедестал со сферой ──────────────────────────────
+
+  var pedestalGroup = new THREE.Group();
+  pedestalGroup.position.set(2.5, 0, -2.5);
+  roomGroup.add(pedestalGroup);
+
+  // Основание
+  addBox(0.46, 0.06, 0.46, 0, 0.03, 0, mMoldD, pedestalGroup);
+  // Тело
+  addBox(0.38, 0.9, 0.38, 0, 0.48, 0, mDark, pedestalGroup);
+  // Верхняя плита
+  addBox(0.44, 0.06, 0.44, 0, 0.96, 0, mMoldD, pedestalGroup);
+
+  // Сфера — анимированная
+  var sphereMat = new THREE.MeshLambertMaterial({ color: artColor });
+  var sphere = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), sphereMat);
+  sphere.position.set(2.5, 1.22, -2.5);
+  sphere.castShadow = true;
   scene.add(sphere);
 
-  // Orbit controls (Street View style)
+  // Кольцо вокруг сферы
+  var ringMat = new THREE.MeshLambertMaterial({ color: 0xe8c060 });
+  var ring = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.015, 8, 32), ringMat);
+  ring.position.copy(sphere.position);
+  ring.castShadow = false;
+  scene.add(ring);
+
+  // ── Orbit controls ────────────────────────────────────
+
   var orbit = createOrbit(camera, renderer.domElement);
 
+  // ── Resize через ResizeObserver ───────────────────────
+
   function onResize() {
-    var w = container.clientWidth || window.innerWidth;
+    var w = container.clientWidth  || window.innerWidth;
     var h = container.clientHeight || window.innerHeight;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
   }
-  window.addEventListener('resize', onResize);
 
-  threeCtx = { renderer: renderer, animId: null, onResize: onResize, orbit: orbit };
+  var resizeObserver = null;
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(container);
+  } else {
+    window.addEventListener('resize', onResize);
+  }
+
+  // ── Сохраняем контекст ────────────────────────────────
+
+  threeCtx = {
+    renderer:       renderer,
+    scene:          scene,
+    animId:         null,
+    orbit:          orbit,
+    resizeObserver: resizeObserver,
+    onResize:       onResize,
+    roomGroup:      roomGroup,
+    sphere:         sphere,
+    ring:           ring,
+    chandGroup:     chandGroup,
+    chandPt:        chandPt,
+    textures:       textures
+  };
+
+  // ── Цикл анимации ─────────────────────────────────────
+
+  var clock = new THREE.Clock();
 
   function animate() {
     threeCtx.animId = requestAnimationFrame(animate);
+    var t = clock.getElapsedTime();
+
+    // Вращение сферы
+    sphere.rotation.y = t * 0.5;
+    sphere.position.y = 1.22 + Math.sin(t * 1.2) * 0.04;
+
+    // Кольцо
+    ring.rotation.x = t * 0.7;
+    ring.rotation.z = t * 0.4;
+    ring.position.copy(sphere.position);
+
+    // Мерцание люстры
+    var flicker = 1.5 + Math.sin(t * 7.3) * 0.06 + Math.sin(t * 13.1) * 0.04;
+    chandPt.intensity = flicker;
+
     orbit.update();
     renderer.render(scene, camera);
   }
   animate();
 }
 
+// ── Полное уничтожение с освобождением памяти ─────────────
+
 function destroyRoom() {
   if (!threeCtx) return;
+
   cancelAnimationFrame(threeCtx.animId);
+
   if (threeCtx.orbit) threeCtx.orbit.destroy();
-  window.removeEventListener('resize', threeCtx.onResize);
+
+  if (threeCtx.resizeObserver) {
+    threeCtx.resizeObserver.disconnect();
+  } else {
+    window.removeEventListener('resize', threeCtx.onResize);
+  }
+
+  // Освобождаем геометрию и материалы
+  if (threeCtx.scene) {
+    threeCtx.scene.traverse(function(obj) {
+      if (obj.isMesh) disposeMesh(obj);
+    });
+  }
+
+  // Освобождаем текстуры
+  if (threeCtx.textures) {
+    threeCtx.textures.forEach(function(t) { t.dispose(); });
+  }
+
   threeCtx.renderer.dispose();
   var canvas = threeCtx.renderer.domElement;
   if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+
   threeCtx = null;
 }
 
