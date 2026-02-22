@@ -358,13 +358,6 @@ function buildRoom(artist) {
   box(rW, 0.06, 0.06, 0, 0.03,    -rD/2 + 0.05, mMold);
   box(rW, 0.06, 0.06, 0, rH-0.03, -rD/2 + 0.05, mMold);
 
-  // Рамка под картину
-  var fw = 4.15, fh = 2.75, fz = -rD/2 + 0.11, ft = 0.12;
-  box(fw, ft, ft,  0,    fh/2,  fz, mFrame);
-  box(fw, ft, ft,  0,   -fh/2,  fz, mFrame);
-  box(ft, fh, ft, -fw/2, 0,     fz, mFrame);
-  box(ft, fh, ft,  fw/2, 0,     fz, mFrame);
-
   // Инфографика или цветная заглушка
   var infPath = artist.infographic && artist.infographic[S.lang]
     ? artist.infographic[S.lang] : null;
