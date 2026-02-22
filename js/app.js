@@ -886,32 +886,267 @@ function buildRoom(artist) {
     });
   });
 
-  // ── Пьедестал со сферой ──────────────────────────────
+ // ── Пьедестал со стилизованным глобусом ──────────────
+  //
+  // Пьедестал: трёхъярусный, с молдингами.
+  // Глобус: процедурная текстура (материки + сетка меридианов),
+  //         ось наклонена на 23.5° (как у Земли),
+  //         физика: инерция + затухание + левитация.
+
+  var GLOBE_RADIUS   = 0.22;
+  var GLOBE_BASE_Y   = 1.15;   // центр глобуса над полом зала
+  var GLOBE_WORLD_X  = 2.5;
+  var GLOBE_WORLD_Z  = -2.5;
+
+  // ── Пьедестал ─────────────────────────────────────────
 
   var pedestalGroup = new THREE.Group();
-  pedestalGroup.position.set(2.5, 0, -2.5);
+  pedestalGroup.position.set(GLOBE_WORLD_X, 0, GLOBE_WORLD_Z);
   roomGroup.add(pedestalGroup);
 
-  // Основание
-  addBox(0.46, 0.06, 0.46, 0, 0.03, 0, mMoldD, pedestalGroup);
-  // Тело
-  addBox(0.38, 0.9, 0.38, 0, 0.48, 0, mDark, pedestalGroup);
-  // Верхняя плита
-  addBox(0.44, 0.06, 0.44, 0, 0.96, 0, mMoldD, pedestalGroup);
+  addBox(0.52, 0.06, 0.52, 0, 0.03,  0, mMoldD, pedestalGroup); // нижняя плита
+  addBox(0.40, 0.10, 0.40, 0, 0.11,  0, mMoldD, pedestalGroup); // переход
+  addBox(0.34, 0.82, 0.34, 0, 0.55,  0, mDark,  pedestalGroup); // колонна
+  addBox(0.42, 0.08, 0.42, 0, 0.995, 0, mMoldD, pedestalGroup); // верхняя плита
 
-  // Сфера — анимированная
-  var sphereMat = createMaterial('lambert', { color: artColor });
-  var sphere = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), sphereMat);
-  sphere.position.set(2.5, 1.22, -2.5);
-  sphere.castShadow = true;
-  scene.add(sphere);
+  // Чаша-подставка для глобуса
+  addCylinder(0.14, 0.08, 0.06, 12, 0, 1.07, 0, mGold, pedestalGroup);
 
-  // Кольцо вокруг сферы
-  var ringMat = createMaterial('lambert', { color: 0xe8c060 });
-  var ring = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.015, 8, 32), ringMat);
-  ring.position.copy(sphere.position);
-  ring.castShadow = false;
-  scene.add(ring);
+  // ── Процедурная текстура глобуса ──────────────────────
+
+  (function() {
+    var S = 512;
+    var c = document.createElement('canvas');
+    c.width = c.height = S;
+    var ctx = c.getContext('2d');
+
+    // Океан — тёмно-синий с градиентом
+    var oceanGrad = ctx.createLinearGradient(0, 0, S, S);
+    oceanGrad.addColorStop(0,   '#0d2a4a');
+    oceanGrad.addColorStop(0.5, '#1a4070');
+    oceanGrad.addColorStop(1,   '#0a1e38');
+    ctx.fillStyle = oceanGrad;
+    ctx.fillRect(0, 0, S, S);
+
+    // Тонкие волны океана
+    ctx.strokeStyle = 'rgba(60,120,200,0.12)';
+    ctx.lineWidth = 1;
+    for (var w = 0; w < S; w += 18) {
+      ctx.beginPath();
+      for (var px = 0; px < S; px++) {
+        var py = w + Math.sin(px * 0.04) * 3;
+        px === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+
+    // Материки (упрощённые блобы через заполненные эллипсы)
+    var continents = [
+      // [cx_norm, cy_norm, rx, ry, rot_deg]
+      [0.18, 0.38,  68, 80,  10],   // Сев. Америка
+      [0.22, 0.62,  42, 55, -10],   // Юж. Америка
+      [0.52, 0.34,  90, 65,   5],   // Евразия
+      [0.54, 0.60,  55, 55,  -5],   // Африка
+      [0.78, 0.62,  48, 38,  15],   // Австралия
+      [0.50, 0.88,  70, 22,   0],   // Антарктида
+      [0.50, 0.12,  60, 18,   0],   // Арктика
+    ];
+
+    continents.forEach(function(cont) {
+      var cx  = cont[0] * S, cy  = cont[1] * S;
+      var rx  = cont[2],     ry  = cont[3];
+      var rot = cont[4] * Math.PI / 180;
+
+      // Тень материка
+      ctx.save();
+      ctx.translate(cx + 3, cy + 4);
+      ctx.rotate(rot);
+      ctx.scale(1, ry / rx);
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, Math.PI * 2);
+      ctx.restore();
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fill();
+
+      // Основной материк
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rot);
+      ctx.scale(1, ry / rx);
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, Math.PI * 2);
+      ctx.restore();
+
+      var landGrad = ctx.createRadialGradient(cx - rx*0.2, cy - ry*0.2, 0, cx, cy, Math.max(rx, ry));
+      landGrad.addColorStop(0,   '#4a7a3a');
+      landGrad.addColorStop(0.5, '#3a6030');
+      landGrad.addColorStop(1,   '#2a4520');
+      ctx.fillStyle = landGrad;
+      ctx.fill();
+
+      // Горы (тёмные пятна)
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rot);
+      ctx.scale(1, ry / rx);
+      ctx.beginPath();
+      ctx.arc(rx * 0.2, ry * 0.1, rx * 0.25, 0, Math.PI * 2);
+      ctx.restore();
+      ctx.fillStyle = 'rgba(30,40,20,0.3)';
+      ctx.fill();
+
+      // Береговая линия
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rot);
+      ctx.scale(1, ry / rx);
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, Math.PI * 2);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(100,180,100,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    // Сетка меридианов и параллелей (стилизованная, золотая)
+    ctx.strokeStyle = 'rgba(210,168,80,0.25)';
+    ctx.lineWidth   = 0.8;
+
+    // Вертикальные (меридианы)
+    for (var mx = 0; mx <= S; mx += S / 12) {
+      ctx.beginPath();
+      ctx.moveTo(mx, 0);
+      ctx.lineTo(mx, S);
+      ctx.stroke();
+    }
+    // Горизонтальные (параллели)
+    for (var my = 0; my <= S; my += S / 6) {
+      ctx.beginPath();
+      ctx.moveTo(0, my);
+      ctx.lineTo(S, my);
+      ctx.stroke();
+    }
+    // Экватор жирнее
+    ctx.strokeStyle = 'rgba(210,168,80,0.5)';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, S / 2);
+    ctx.lineTo(S, S / 2);
+    ctx.stroke();
+
+    // Тропики
+    ctx.strokeStyle = 'rgba(210,168,80,0.3)';
+    ctx.lineWidth   = 0.8;
+    [S * 0.3, S * 0.7].forEach(function(ty) {
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(S, ty); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Полярные круги
+    ctx.strokeStyle = 'rgba(150,200,255,0.3)';
+    [S * 0.12, S * 0.88].forEach(function(ty) {
+      ctx.setLineDash([3, 8]);
+      ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(S, ty); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Небольшие облака
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    [[0.3, 0.25, 40, 12], [0.6, 0.45, 55, 10], [0.1, 0.6, 35, 9],
+     [0.75, 0.3, 48, 11], [0.45, 0.7, 60, 13]].forEach(function(cl) {
+      ctx.beginPath();
+      ctx.ellipse(cl[0]*S, cl[1]*S, cl[2], cl[3], 0, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    var globeTex = new THREE.CanvasTexture(c);
+    textures.push(globeTex);
+
+    // ── Группа глобуса (ось + сфера) ──────────────────
+
+    var globeGroup = new THREE.Group();
+    globeGroup.position.set(GLOBE_WORLD_X, GLOBE_BASE_Y, GLOBE_WORLD_Z);
+    scene.add(globeGroup);
+
+    // Наклон оси на 23.5°
+    var AXIAL_TILT = 23.5 * Math.PI / 180;
+    globeGroup.rotation.z = AXIAL_TILT;
+
+    // Ось (тонкий золотой цилиндр)
+    var axisMat = new THREE.MeshLambertMaterial({ color: 0xe8c060 });
+    var axisRod = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.008, 0.008, GLOBE_RADIUS * 2.6, 8),
+      axisMat
+    );
+    globeGroup.add(axisRod);
+
+    // Полюсные шапки на оси
+    [-1, 1].forEach(function(dir) {
+      var cap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.018, 8, 8),
+        axisMat
+      );
+      cap.position.y = dir * GLOBE_RADIUS * 1.3;
+      globeGroup.add(cap);
+    });
+
+    // Сама сфера
+    var globeMat = new THREE.MeshLambertMaterial({ map: globeTex });
+    var globe    = new THREE.Mesh(new THREE.SphereGeometry(GLOBE_RADIUS, 48, 32), globeMat);
+    globe.castShadow = true;
+    globeGroup.add(globe);
+
+    // Атмосфера — полупрозрачная оболочка
+    var atmosMat = new THREE.MeshLambertMaterial({
+      color:       0x88bbff,
+      transparent: true,
+      opacity:     0.08,
+      side:        THREE.FrontSide
+    });
+    var atmos = new THREE.Mesh(
+      new THREE.SphereGeometry(GLOBE_RADIUS * 1.035, 32, 24),
+      atmosMat
+    );
+    globeGroup.add(atmos);
+
+    // Экваториальное кольцо (наклонено вместе с группой)
+    var eqRingMat = new THREE.MeshLambertMaterial({ color: 0xe8c060 });
+    var eqRing    = new THREE.Mesh(
+      new THREE.TorusGeometry(GLOBE_RADIUS * 1.18, 0.009, 8, 48),
+      eqRingMat
+    );
+    eqRing.rotation.x = Math.PI / 2;
+    globeGroup.add(eqRing);
+
+    // ── Физика вращения ────────────────────────────────
+    //
+    // Угловые скорости по осям (рад/с)
+    // В начале: небольшой «бросок».
+    var angVelY = 0.45;   // основное вращение вокруг оси
+    var angVelX = 0.08;   // небольшое покачивание
+    var FRICTION = 0.985; // коэффициент затухания (< 1)
+    var BASE_SPIN = 0.12; // минимальная скорость — глобус не останавливается полностью
+
+    // Левитация
+    var levPhase    = 0;
+    var LEV_AMP     = 0.03;  // амплитуда (м)
+    var LEV_FREQ    = 0.9;   // частота (Гц)
+    var LEV_ACCEL   = 0;     // текущее ускорение левитации
+    var levVelocity = 0;     // скорость по Y
+    var levPos      = 0;     // смещение от BASE_Y
+
+    // Сохраняем ссылки для анимации
+    threeCtx.globeGroup = globeGroup;
+    threeCtx.globePhysics = {
+      angVelY:  angVelY,
+      angVelX:  angVelX,
+      levPos:   levPos,
+      levVel:   levVelocity,
+      levPhase: levPhase
+    };
+    threeCtx.globeInternals = { globe: globe, atmos: atmos };
+  })();
 
   // ── Orbit controls ────────────────────────────────────
 
