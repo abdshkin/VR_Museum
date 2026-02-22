@@ -229,21 +229,28 @@ function onCardClick(i) {
 // ============================================================
 // ЯЗЫК
 // ============================================================
+function updateLangText(lang) {
+  var mapping = [
+    ['bioEnterBtn', 'enterRoom'],
+    ['bioLabel', 'bio'],
+    ['gyroHint', 'dragHint'],
+    ['roomBackBtn', 'back']
+  ];
+  mapping.forEach(function(pair) {
+    if (D[pair[0]]) D[pair[0]].textContent = LANG[lang][pair[1]];
+  });
+  var eyebrow = document.querySelector('.section-eyebrow');
+  if (eyebrow) eyebrow.textContent = LANG[lang].eyebrow;
+  var titleEl = document.querySelector('.section-title');
+  if (titleEl) titleEl.textContent = LANG[lang].title;
+}
+
 function setLang(lang) {
   S.lang = lang;
   D.langBtns.forEach(function(btn) {
     btn.classList.toggle('active', btn.dataset.lang === lang);
   });
-  if (D.bioEnterBtn) D.bioEnterBtn.textContent = LANG[lang].enterRoom;
-  if (D.bioLabel)    D.bioLabel.textContent    = LANG[lang].bio;
-  if (D.gyroHint)    D.gyroHint.textContent    = LANG[lang].dragHint;
-  if (D.roomBackBtn) D.roomBackBtn.textContent = LANG[lang].back;
-
-  // Заголовок галереи
-  var eyebrow = document.querySelector('.section-eyebrow');
-  if (eyebrow) eyebrow.textContent = LANG[lang].eyebrow;
-  var titleEl = document.querySelector('.section-title');
-  if (titleEl) titleEl.textContent = LANG[lang].title;
+  updateLangText(lang);
 
   // Метка в зале
   if (S.activeArtist && D.roomLabelName) {
@@ -253,6 +260,7 @@ function setLang(lang) {
 
   updateCardText();
   refreshBio();
+  updateLangText(lang);
 
   // Перестраиваем зал если открыт (обновляет инфографику на нужном языке)
   if (S.view === 'room' && S.activeArtist && threeCtx) {
@@ -313,6 +321,15 @@ function disposeGroup(group) {
   group.traverse(function(obj) {
     if (obj.isMesh) disposeMesh(obj);
   });
+}
+
+// ── Фабрика материалов ─────────────────────────────────────
+
+function createMaterial(type, opts) {
+  opts = opts || {};
+  if (type === 'lambert') return new THREE.MeshLambertMaterial(opts);
+  if (type === 'basic') return new THREE.MeshBasicMaterial(opts);
+  return new THREE.MeshLambertMaterial(opts);
 }
 
 // ── Процедурная текстура паркета ───────────────────────────
@@ -472,10 +489,10 @@ function buildRoom(artist) {
   scene.add(spotMain.target);
 
   // Два боковых прожектора для картин
-  [-2.6, 2.6].forEach(function(x) {
+  [-1, 1].forEach(function(side) {
     var sp = new THREE.SpotLight(0xffeedd, 1.2, 5, Math.PI / 9, 0.5, 2);
-    sp.position.set(x > 0 ? 3.2 : -3.2, 4.0, -1.0);
-    sp.target.position.set(x > 0 ? 3.4 : -3.4, 2.0, -3.9);
+    sp.position.set(side * 3.2, 4.0, -1.0);
+    sp.target.position.set(side * 3.4, 2.0, -3.9);
     sp.castShadow = false;
     scene.add(sp);
     scene.add(sp.target);
@@ -493,17 +510,30 @@ function buildRoom(artist) {
   var wallTex    = makeWallTexture(512);
   textures.push(wallTex);
 
-  var mFloor = new THREE.MeshLambertMaterial({ map: parquetTex });
-  var mWall  = new THREE.MeshLambertMaterial({ map: wallTex });
-  var mCeil  = new THREE.MeshLambertMaterial({ color: 0x1c1810 });
-  var mMold  = new THREE.MeshLambertMaterial({ color: 0xd4a853 });
-  var mMoldD = new THREE.MeshLambertMaterial({ color: 0xb08830 });
-  var mFrame = new THREE.MeshLambertMaterial({ color: 0x7a5512 });
-  var mDark  = new THREE.MeshLambertMaterial({ color: 0x1a1410 });
-  var mDarkMid = new THREE.MeshLambertMaterial({ color: 0x2e2418 });
-  var mGold  = new THREE.MeshLambertMaterial({ color: 0xe8c060 });
-  var mBench = new THREE.MeshLambertMaterial({ color: 0x3a2810 });
-  var mBenchLeather = new THREE.MeshLambertMaterial({ color: 0x5a1a10 });
+  var matDefs = {
+    mFloor: { map: parquetTex },
+    mWall: { map: wallTex },
+    mCeil: { color: 0x1c1810 },
+    mMold: { color: 0xd4a853 },
+    mMoldD: { color: 0xb08830 },
+    mFrame: { color: 0x7a5512 },
+    mDark: { color: 0x1a1410 },
+    mDarkMid: { color: 0x2e2418 },
+    mGold: { color: 0xe8c060 },
+    mBench: { color: 0x3a2810 },
+    mBenchLeather: { color: 0x5a1a10 }
+  };
+  var mFloor = createMaterial('lambert', matDefs.mFloor);
+  var mWall = createMaterial('lambert', matDefs.mWall);
+  var mCeil = createMaterial('lambert', matDefs.mCeil);
+  var mMold = createMaterial('lambert', matDefs.mMold);
+  var mMoldD = createMaterial('lambert', matDefs.mMoldD);
+  var mFrame = createMaterial('lambert', matDefs.mFrame);
+  var mDark = createMaterial('lambert', matDefs.mDark);
+  var mDarkMid = createMaterial('lambert', matDefs.mDarkMid);
+  var mGold = createMaterial('lambert', matDefs.mGold);
+  var mBench = createMaterial('lambert', matDefs.mBench);
+  var mBenchLeather = createMaterial('lambert', matDefs.mBenchLeather);
 
   // Группа всей комнаты
   var roomGroup = new THREE.Group();
@@ -538,28 +568,35 @@ function buildRoom(artist) {
   // ── Плинтусы (8 штук по периметру) ──────────────────
 
   var plinthH = 0.15, plinthD = 0.06;
-  // Горизонтальные по z
-  addBox(rW - 0.24, plinthH, plinthD, 0, plinthH/2, -rD/2 + 0.06, mMoldD);
-  addBox(rW - 0.24, plinthH, plinthD, 0, plinthH/2,  rD/2 - 0.06, mMoldD);
-  // Горизонтальные по x
-  addBox(plinthD, plinthH, rD - 0.24, -rW/2 + 0.06, plinthH/2, 0, mMoldD);
-  addBox(plinthD, plinthH, rD - 0.24,  rW/2 - 0.06, plinthH/2, 0, mMoldD);
+  var plinths = [
+    [rW - 0.24, plinthH, plinthD, 0, plinthH/2, -rD/2 + 0.06],
+    [rW - 0.24, plinthH, plinthD, 0, plinthH/2,  rD/2 - 0.06],
+    [plinthD, plinthH, rD - 0.24, -rW/2 + 0.06, plinthH/2, 0],
+    [plinthD, plinthH, rD - 0.24,  rW/2 - 0.06, plinthH/2, 0]
+  ];
+  plinths.forEach(function(p) { addBox(p[0], p[1], p[2], p[3], p[4], p[5], mMoldD); });
 
   // ── Карнизы потолка ──────────────────────────────────
 
   var cornH = 0.12, cornD = 0.1;
-  addBox(rW, cornH, cornD, 0, rH - cornH/2, -rD/2 + cornD/2, mMold);
-  addBox(rW, cornH, cornD, 0, rH - cornH/2,  rD/2 - cornD/2, mMold);
-  addBox(cornD, cornH, rD, -rW/2 + cornD/2, rH - cornH/2, 0, mMold);
-  addBox(cornD, cornH, rD,  rW/2 - cornD/2, rH - cornH/2, 0, mMold);
+  var cornices = [
+    [rW, cornH, cornD, 0, rH - cornH/2, -rD/2 + cornD/2],
+    [rW, cornH, cornD, 0, rH - cornH/2,  rD/2 - cornD/2],
+    [cornD, cornH, rD, -rW/2 + cornD/2, rH - cornH/2, 0],
+    [cornD, cornH, rD,  rW/2 - cornD/2, rH - cornH/2, 0]
+  ];
+  cornices.forEach(function(c) { addBox(c[0], c[1], c[2], c[3], c[4], c[5], mMold); });
 
   // ── Молдинги — горизонтальный пояс на стенах ─────────
 
   var mBelt = 0.05, mBeltH = 2.8;
-  addBox(rW, mBelt, mBelt, 0, mBeltH, -rD/2 + 0.07, mMold);
-  addBox(rW, mBelt, mBelt, 0, mBeltH,  rD/2 - 0.07, mMold);
-  addBox(mBelt, mBelt, rD, -rW/2 + 0.07, mBeltH, 0, mMold);
-  addBox(mBelt, mBelt, rD,  rW/2 - 0.07, mBeltH, 0, mMold);
+  var belts = [
+    [rW, mBelt, mBelt, 0, mBeltH, -rD/2 + 0.07],
+    [rW, mBelt, mBelt, 0, mBeltH,  rD/2 - 0.07],
+    [mBelt, mBelt, rD, -rW/2 + 0.07, mBeltH, 0],
+    [mBelt, mBelt, rD,  rW/2 - 0.07, mBeltH, 0]
+  ];
+  belts.forEach(function(b) { addBox(b[0], b[1], b[2], b[3], b[4], b[5], mMold); });
 
   // ── Ковёр ─────────────────────────────────────────────
 
@@ -572,14 +609,11 @@ function buildRoom(artist) {
   roomGroup.add(rug);
 
   // ── Колонны ──────────────────────────────────────────
-
-  [-2.5, 2.5].forEach(function(x) {
-    [-rD/2 + 0.5, rD/2 - 0.5].forEach(function(z) {
-      // Основание
+  var colX = [-2.5, 2.5], colZ = [-rD/2 + 0.5, rD/2 - 0.5];
+  colX.forEach(function(x) {
+    colZ.forEach(function(z) {
       addBox(0.3, 0.12, 0.3, x, 0.06, z, mMoldD);
-      // Ствол
       addCylinder(0.1, 0.11, rH - 0.24, 12, x, rH/2, z, mWall);
-      // Капитель
       addBox(0.28, 0.15, 0.28, x, rH - 0.1, z, mMoldD);
     });
   });
@@ -607,6 +641,9 @@ function buildRoom(artist) {
 
   // Свечи
   var candleAngles = [0, Math.PI/2, Math.PI, Math.PI*3/2, Math.PI/4, Math.PI*3/4, Math.PI*5/4, Math.PI*7/4];
+  var candleMat = createMaterial('lambert', { color: 0xfffde8 });
+  var flameMat = createMaterial('basic', { color: 0xffcc44 });
+  
   candleAngles.forEach(function(a) {
     var radius = a % (Math.PI/2) === 0 ? 0.18 : 0.14;
     var cx = Math.cos(a) * radius;
@@ -620,23 +657,19 @@ function buildRoom(artist) {
     chandGroup.add(arm);
 
     // Свеча
-    var candle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.12, 8),
-      new THREE.MeshLambertMaterial({ color: 0xfffde8 }));
+    var candle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.12, 8), candleMat);
     candle.position.set(cx, -0.68, cz);
     chandGroup.add(candle);
 
     // Огонёк
-    var flame = new THREE.Mesh(
-      new THREE.SphereGeometry(0.025, 6, 6),
-      new THREE.MeshBasicMaterial({ color: 0xffcc44 })
-    );
+    var flame = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), flameMat);
     flame.position.set(cx, -0.60, cz);
     chandGroup.add(flame);
   });
 
   // ── Прожекторы-кронштейны над панелью ───────────────
-
-  [-0.8, 0.8].forEach(function(x) {
+  [-1, 1].forEach(function(side) {
+    var x = side * 0.8;
     addBox(0.04, 0.04, 0.35, x, rH - 0.15, -rD/2 + 0.35, mDark);
     var lampCone = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.15, 8), mDark);
     lampCone.rotation.x = Math.PI;
@@ -682,26 +715,28 @@ function buildRoom(artist) {
 
   // ── Картины на боковых стенах ─────────────────────────
 
-  function hangPainting(x, z, rotY, hue) {
+  var paintingPositions = [
+    { x: -rW/2 + 0.07, z: -2.5, rotY: Math.PI/2, hue: 0.08 },
+    { x: -rW/2 + 0.07, z: 0.5, rotY: Math.PI/2, hue: 0.55 },
+    { x: -rW/2 + 0.07, z: 2.5, rotY: Math.PI/2, hue: 0.75 },
+    { x: rW/2 - 0.07, z: -2.5, rotY: -Math.PI/2, hue: 0.12 },
+    { x: rW/2 - 0.07, z: 0.5, rotY: -Math.PI/2, hue: 0.40 },
+    { x: rW/2 - 0.07, z: 2.5, rotY: -Math.PI/2, hue: 0.65 }
+  ];
+
+  function hangPainting(pos) {
     var pW = 1.1, pH = 0.85;
-    var frameMesh = addBox(pW + 0.1, pH + 0.1, 0.04, x, 2.1, z, mFrame);
-    frameMesh.rotation.y = rotY;
-    var c = new THREE.Color().setHSL(hue, 0.5, 0.3);
-    var paintMat = new THREE.MeshLambertMaterial({ color: c });
+    var frameMesh = addBox(pW + 0.1, pH + 0.1, 0.04, pos.x, 2.1, pos.z, mFrame);
+    frameMesh.rotation.y = pos.rotY;
+    var c = new THREE.Color().setHSL(pos.hue, 0.5, 0.3);
+    var paintMat = createMaterial('lambert', { color: c });
     var paint = new THREE.Mesh(new THREE.BoxGeometry(pW, pH, 0.02), paintMat);
-    paint.position.set(x, 2.1, z);
-    paint.rotation.y = rotY;
+    paint.position.set(pos.x, 2.1, pos.z);
+    paint.rotation.y = pos.rotY;
     roomGroup.add(paint);
   }
 
-  // Левая стена
-  hangPainting(-rW/2 + 0.07, -2.5, Math.PI/2, 0.08);
-  hangPainting(-rW/2 + 0.07,  0.5, Math.PI/2, 0.55);
-  hangPainting(-rW/2 + 0.07,  2.5, Math.PI/2, 0.75);
-  // Правая стена
-  hangPainting( rW/2 - 0.07, -2.5, -Math.PI/2, 0.12);
-  hangPainting( rW/2 - 0.07,  0.5, -Math.PI/2, 0.40);
-  hangPainting( rW/2 - 0.07,  2.5, -Math.PI/2, 0.65);
+  paintingPositions.forEach(hangPainting);
 
     // ── Книжный шкаф ─────────────────────────────────────
   //
@@ -769,69 +804,6 @@ function buildRoom(artist) {
   // Их нижняя грань = topY полки.
   // X-центр книги = wallThick (задняя стенка) + глубина книги / 2
   // Z расставляем от левого края к правому.
- var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080, 0x883010, 0x308070, 0x7a3020];
-
-  var bookDepth   = 0.22;   // глубина книги (от задней стенки вперёд)
-  var bookXCenter = wallThick + bookDepth / 2 + 0.01; // небольшой зазор от задней стенки
-
-  // Данные для каждой полки: сколько книг и смещение по Z
-  var shelfData = [
-    { topY: shelfTopY[0], count: 9,  zOffset: 0 },
-    { topY: shelfTopY[1], count: 7,  zOffset: 0.05 },
-    { topY: shelfTopY[2], count: 8,  zOffset: -0.05 }
-  ];
-
-  shelfData.forEach(function(shelf, si) {
-    var zCursor = -cabinetW / 2 + wallThick + 0.04; // старт по Z (левый край)
-
-    for (var bi = 0; bi < shelf.count; bi++) {
-      var bookW  = 0.1 + Math.random() * 0.06;   // толщина корешка
-      var bookH  = 0.20 + Math.random() * 0.12;  // высота книги
-      var colorIdx = (bi + si * 3) % bColors.length;
-
-      // Небольшой случайный наклон — только если книга не крайняя
-      var tilt = (bi > 0 && bi < shelf.count - 1) ? (Math.random() - 0.5) * 0.08 : 0;
-
-      var book = new THREE.Mesh(
-        new THREE.BoxGeometry(bookDepth, bookH, bookW),
-        new THREE.MeshLambertMaterial({ color: bColors[colorIdx] })
-      );
-
-      // Позиция: нижняя грань = shelf.topY  →  центр Y = topY + bookH/2
-      book.position.set(
-        bookXCenter,
-        shelf.topY + bookH / 2,
-        zCursor + bookW / 2 + shelf.zOffset
-      );
-      book.rotation.z = tilt;
-
-      // Корешок — тонкая полоска другого цвета
-      var spineColor = new THREE.Color(bColors[colorIdx]).addScalar(0.15);
-      var spine = new THREE.Mesh(
-        new THREE.BoxGeometry(bookDepth + 0.002, bookH - 0.01, 0.005),
-        new THREE.MeshLambertMaterial({ color: spineColor })
-      );
-      spine.position.copy(book.position);
-      spine.position.z -= bookW / 2 - 0.003; // передний торец
-      spine.rotation.z = tilt;
-      shelfGroup.add(spine);
-
-      shelfGroup.add(book);
-      zCursor += bookW + 0.008; // зазор между книгами
-
-      // Не выходим за пределы полки
-      if (zCursor > cabinetW / 2 - wallThick - 0.06) break;
-    }
-
-    // Декоративная фигурка в конце полки (небольшой цилиндр)
-    var figH = 0.14 + Math.random() * 0.06;
-    var fig = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.025, 0.03, figH, 8),
-      new THREE.MeshLambertMaterial({ color: 0xd4a853 })
-    );
-    fig.position.set(bookXCenter, shelf.topY + figH / 2, cabinetW / 2 - wallThick - 0.07);
-    shelfGroup.add(fig);
-  });
 
   // ── Скамейка для посетителей ──────────────────────────
 
@@ -846,8 +818,11 @@ function buildRoom(artist) {
   // Мягкая накладка
   addBox(1.75, 0.04, 0.4, 0, 0.52, 0.01, mBenchLeather, benchGroup);
   // Ножки
-  [[-0.78, -0.18], [-0.78, 0.18], [0.78, -0.18], [0.78, 0.18]].forEach(function(p) {
-    addBox(0.06, 0.46, 0.06, p[0], 0.23, p[1], mDarkMid, benchGroup);
+  var legPosX = [-0.78, 0.78], legPosZ = [-0.18, 0.18];
+  legPosX.forEach(function(x) {
+    legPosZ.forEach(function(z) {
+      addBox(0.06, 0.46, 0.06, x, 0.23, z, mDarkMid, benchGroup);
+    });
   });
 
   // ── Пьедестал со сферой ──────────────────────────────
@@ -864,14 +839,14 @@ function buildRoom(artist) {
   addBox(0.44, 0.06, 0.44, 0, 0.96, 0, mMoldD, pedestalGroup);
 
   // Сфера — анимированная
-  var sphereMat = new THREE.MeshLambertMaterial({ color: artColor });
+  var sphereMat = createMaterial('lambert', { color: artColor });
   var sphere = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), sphereMat);
   sphere.position.set(2.5, 1.22, -2.5);
   sphere.castShadow = true;
   scene.add(sphere);
 
   // Кольцо вокруг сферы
-  var ringMat = new THREE.MeshLambertMaterial({ color: 0xe8c060 });
+  var ringMat = createMaterial('lambert', { color: 0xe8c060 });
   var ring = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.015, 8, 32), ringMat);
   ring.position.copy(sphere.position);
   ring.castShadow = false;
@@ -1225,26 +1200,16 @@ function createOrbit(camera, canvas) {
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 async function init() {
-  D.loader         = document.getElementById('loader');
-  D.sliderView     = document.getElementById('slider-view');
-  D.roomView       = document.getElementById('room-view');
-  D.track          = document.getElementById('slider-track');
-  D.trackWrap      = document.getElementById('slider-track-wrapper');
-  D.dots           = document.getElementById('slider-dots');
-  D.prevBtn        = document.getElementById('prev-arrow');
-  D.nextBtn        = document.getElementById('next-arrow');
-  D.bioPanel       = document.getElementById('bio-panel');
-  D.bioName        = document.getElementById('bio-name');
-  D.bioYears       = document.getElementById('bio-years');
-  D.bioText        = document.getElementById('bio-text');
-  D.bioEnterBtn    = document.getElementById('bio-enter-btn');
-  D.bioLabel       = document.getElementById('bio-label');
-  D.roomContainer  = document.getElementById('aframe-container');
-  D.roomLabelName  = document.getElementById('room-label-name');
-  D.roomLabelYears = document.getElementById('room-label-years');
-  D.gyroHint       = document.getElementById('gyro-hint');
-  D.langBtns       = document.querySelectorAll('.lang-btn');
-  D.roomBackBtn    = document.getElementById('room-back-btn');
+  var domIds = ['loader','sliderView','roomView','track','trackWrap','dots','prevBtn','nextBtn','bioPanel',
+                 'bioName','bioYears','bioText','bioEnterBtn','bioLabel','roomContainer','roomLabelName',
+                 'roomLabelYears','gyroHint','roomBackBtn'];
+  var htmlIds = ['loader','slider-view','room-view','slider-track','slider-track-wrapper','slider-dots',
+                  'prev-arrow','next-arrow','bio-panel','bio-name','bio-years','bio-text','bio-enter-btn',
+                  'bio-label','aframe-container','room-label-name','room-label-years','gyro-hint','room-back-btn'];
+  domIds.forEach(function(key, i) {
+    D[key] = document.getElementById(htmlIds[i]);
+  });
+  D.langBtns = document.querySelectorAll('.lang-btn');
 
   // Проверяем критичные элементы
   var missing = ['track','trackWrap','dots','bioPanel','roomContainer'].filter(function(k) { return !D[k]; });
@@ -1271,9 +1236,14 @@ async function init() {
   setLang('kz');
 
   // События кнопок
-  if (D.prevBtn)    D.prevBtn.addEventListener('click',    function() { prev(); stopAuto(); startAuto(); });
-  if (D.nextBtn)    D.nextBtn.addEventListener('click',    function() { next(); stopAuto(); startAuto(); });
-  if (D.roomBackBtn) D.roomBackBtn.addEventListener('click', goBack);
+  var btnEvents = [
+    [D.prevBtn, 'click', function() { prev(); stopAuto(); startAuto(); }],
+    [D.nextBtn, 'click', function() { next(); stopAuto(); startAuto(); }],
+    [D.roomBackBtn, 'click', goBack]
+  ];
+  btnEvents.forEach(function(cfg) {
+    if (cfg[0]) cfg[0].addEventListener(cfg[1], cfg[2]);
+  });
 
   if (D.bioEnterBtn) {
     D.bioEnterBtn.addEventListener('click', function() {
