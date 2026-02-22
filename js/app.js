@@ -1122,7 +1122,7 @@ function createOrbit(camera, canvas) {
     isDown = true;
     lastX  = e.clientX; lastY = e.clientY;
     vX = 0; vY = 0;
-    canvas.style.cursor = 'grabbing';
+    canvas.style.cursor = 'none';
   });
   on(canvas, 'wheel', function(e) {
     e.preventDefault();
@@ -1134,13 +1134,13 @@ function createOrbit(camera, canvas) {
   var onMM = function(e) {
     if (!isDown) return;
     var dx = e.clientX - lastX, dy = e.clientY - lastY;
-    vX = dx * SENS * 0.7; vY = dy * SENS * 0.7;
+    vX = dx * SENS; vY = dy * SENS;
     if (gyroActive) {
-      dragOffX -= dx * SENS * 0.7;
-      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY + dy * SENS * 0.7));
+      dragOffX -= dx * SENS;
+      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY + dy * SENS));
     } else {
-      fallTheta -= dx * SENS * 0.7;
-      fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + dy * SENS * 0.7));
+      fallTheta -= dx * SENS;
+      fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + dy * SENS));
     }
     lastX = e.clientX; lastY = e.clientY;
   };
