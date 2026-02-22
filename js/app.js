@@ -1000,6 +1000,7 @@ function createOrbit(camera, canvas) {
   var FOV_MAX = 65;
   var SENS    = 0.010; // чувствительность drag
   var DAMP    = 0.85;  // затухание инерции (выше = более гладкое движение)
+  var MOUSE_SMOOTH = 0.65;  // коэффициент сглаживания мыши (0-1, выше = более гладко)
 
   // --- Состояние ---
   var fov      = FOV_DEF;
@@ -1011,6 +1012,8 @@ function createOrbit(camera, canvas) {
   var isTouching = false;
   var isPinch    = false;
   var lastPinch  = 0;
+  var mouseDxSmoothed = 0;  // сглаженное движение мыши по X
+  var mouseDySmoothed = 0;  // сглаженное движение мыши по Y
 
   // Кватернионы
   var Q     = new THREE.Quaternion();  // итоговая ориентация
@@ -1122,6 +1125,8 @@ function createOrbit(camera, canvas) {
     isDown = true;
     lastX  = e.clientX; lastY = e.clientY;
     vX = 0; vY = 0;
+    mouseDxSmoothed = 0;  // Обнуляем сглаженные значения при захвате
+    mouseDySmoothed = 0;
     canvas.style.cursor = 'none';
   });
   on(canvas, 'wheel', function(e) {
@@ -1134,13 +1139,19 @@ function createOrbit(camera, canvas) {
   var onMM = function(e) {
     if (!isDown) return;
     var dx = e.clientX - lastX, dy = e.clientY - lastY;
-    vX = dx * SENS; vY = dy * SENS;
+    
+    // Сглаживание движения мыши через фильтр низких частот
+    mouseDxSmoothed = mouseDxSmoothed * MOUSE_SMOOTH + dx * (1 - MOUSE_SMOOTH);
+    mouseDySmoothed = mouseDySmoothed * MOUSE_SMOOTH + dy * (1 - MOUSE_SMOOTH);
+    
+    vX = mouseDxSmoothed * SENS; 
+    vY = mouseDySmoothed * SENS;
     if (gyroActive) {
-      dragOffX -= dx * SENS;
-      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY - dy * SENS));
+      dragOffX -= mouseDxSmoothed * SENS;
+      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY - mouseDySmoothed * SENS));
     } else {
-      fallTheta += dx * SENS;
-      fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + dy * SENS));
+      fallTheta += mouseDxSmoothed * SENS;
+      fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + mouseDySmoothed * SENS));
     }
     lastX = e.clientX; lastY = e.clientY;
   };
