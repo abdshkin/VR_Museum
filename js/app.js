@@ -769,6 +769,69 @@ function buildRoom(artist) {
   // Их нижняя грань = topY полки.
   // X-центр книги = wallThick (задняя стенка) + глубина книги / 2
   // Z расставляем от левого края к правому.
+ var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080, 0x883010, 0x308070, 0x7a3020];
+
+  var bookDepth   = 0.22;   // глубина книги (от задней стенки вперёд)
+  var bookXCenter = wallThick + bookDepth / 2 + 0.01; // небольшой зазор от задней стенки
+
+  // Данные для каждой полки: сколько книг и смещение по Z
+  var shelfData = [
+    { topY: shelfTopY[0], count: 9,  zOffset: 0 },
+    { topY: shelfTopY[1], count: 7,  zOffset: 0.05 },
+    { topY: shelfTopY[2], count: 8,  zOffset: -0.05 }
+  ];
+
+  shelfData.forEach(function(shelf, si) {
+    var zCursor = -cabinetW / 2 + wallThick + 0.04; // старт по Z (левый край)
+
+    for (var bi = 0; bi < shelf.count; bi++) {
+      var bookW  = 0.1 + Math.random() * 0.06;   // толщина корешка
+      var bookH  = 0.20 + Math.random() * 0.12;  // высота книги
+      var colorIdx = (bi + si * 3) % bColors.length;
+
+      // Небольшой случайный наклон — только если книга не крайняя
+      var tilt = (bi > 0 && bi < shelf.count - 1) ? (Math.random() - 0.5) * 0.08 : 0;
+
+      var book = new THREE.Mesh(
+        new THREE.BoxGeometry(bookDepth, bookH, bookW),
+        new THREE.MeshLambertMaterial({ color: bColors[colorIdx] })
+      );
+
+      // Позиция: нижняя грань = shelf.topY  →  центр Y = topY + bookH/2
+      book.position.set(
+        bookXCenter,
+        shelf.topY + bookH / 2,
+        zCursor + bookW / 2 + shelf.zOffset
+      );
+      book.rotation.z = tilt;
+
+      // Корешок — тонкая полоска другого цвета
+      var spineColor = new THREE.Color(bColors[colorIdx]).addScalar(0.15);
+      var spine = new THREE.Mesh(
+        new THREE.BoxGeometry(bookDepth + 0.002, bookH - 0.01, 0.005),
+        new THREE.MeshLambertMaterial({ color: spineColor })
+      );
+      spine.position.copy(book.position);
+      spine.position.z -= bookW / 2 - 0.003; // передний торец
+      spine.rotation.z = tilt;
+      shelfGroup.add(spine);
+
+      shelfGroup.add(book);
+      zCursor += bookW + 0.008; // зазор между книгами
+
+      // Не выходим за пределы полки
+      if (zCursor > cabinetW / 2 - wallThick - 0.06) break;
+    }
+
+    // Декоративная фигурка в конце полки (небольшой цилиндр)
+    var figH = 0.14 + Math.random() * 0.06;
+    var fig = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.03, figH, 8),
+      new THREE.MeshLambertMaterial({ color: 0xd4a853 })
+    );
+    fig.position.set(bookXCenter, shelf.topY + figH / 2, cabinetW / 2 - wallThick - 0.07);
+    shelfGroup.add(fig);
+  });
 
   // ── Скамейка для посетителей ──────────────────────────
 
