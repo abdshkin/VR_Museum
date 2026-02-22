@@ -391,9 +391,9 @@ function buildRoom(artist) {
   var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080];
   for (var bi = 0; bi < 5; bi++) {
     var bw = 0.06 + (bi * 0.008), bh = 0.22 + (bi * 0.02);
-    box(bw, bh, 0.18, -rW/2+0.38+(bi*0.13), 2.0+bh/2, -1.5,
+    box(bw, bh, 5, -rW/2+0.38+(bi*0.13), 2.0+bh/2, -1.5,
       new THREE.MeshLambertMaterial({ color: bColors[bi] }));
-    box(bw, bh, 0.18, -rW/2+0.38+(bi*0.13), 1.3+bh/2, -1.5,
+    box(bw, bh, 5, -rW/2+0.38+(bi*0.13), 1.3+bh/2, -1.5,
       new THREE.MeshLambertMaterial({ color: bColors[(bi+2)%5] }));
   }
 
