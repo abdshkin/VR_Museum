@@ -367,7 +367,7 @@ function buildRoom(artist) {
       infPath,
       function(tex) {
         var m = new THREE.Mesh(
-          new THREE.BoxGeometry(4, 2.6, 0.01),
+          new THREE.BoxGeometry(5, 2.6, 0.01),
           new THREE.MeshLambertMaterial({ map: tex })
         );
         m.position.set(0, 2.2, -rD/2 + 0.12);
