@@ -999,7 +999,7 @@ function createOrbit(camera, canvas) {
   var FOV_MIN = 20;    // максимальный зум (~3x)
   var FOV_MAX = 65;
   var SENS    = 0.010; // чувствительность drag
-  var DAMP    = 0.82;  // затухание инерции
+  var DAMP    = 0.85;  // затухание инерции (выше = более гладкое движение)
 
   // --- Состояние ---
   var fov      = FOV_DEF;
@@ -1015,8 +1015,10 @@ function createOrbit(camera, canvas) {
   // Кватернионы
   var Q     = new THREE.Quaternion();  // итоговая ориентация
   var QGyro = new THREE.Quaternion();  // от гироскопа
+  var QGyroPrev = new THREE.Quaternion();  // предыдущий кватернион (для фильтрации)
   var QDrag = new THREE.Quaternion();  // смещение от drag
   var QBase = new THREE.Quaternion();  // базовая ориентация при захвате drag
+  var GYRO_SMOOTH = 0.75;  // коэффициент сглаживания (0.75 = хороший баланс)
 
   // Для конвертации DeviceOrientation → кватернион (алгоритм DeviceOrientationControls THREE.js r128)
   var zee   = new THREE.Vector3(0, 0, 1);
@@ -1165,6 +1167,10 @@ function createOrbit(camera, canvas) {
     q0.setFromAxisAngle(zee, -orient);
     QGyro.multiply(q0);
 
+    // Фильтрация гироскопа: сглаживание между предыдущим и текущим значением
+    QGyroPrev.slerp(QGyro, 1 - GYRO_SMOOTH);
+    QGyro.copy(QGyroPrev);
+
     gyroActive = true;
   };
   on(window, 'deviceorientation', onOrient);
@@ -1201,8 +1207,9 @@ function createOrbit(camera, canvas) {
           dragOffX -= vX * 0.3; vX *= DAMP;
           dragOffY += vY * 0.3; vY *= DAMP;
           dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY));
-          if (Math.abs(vX) < 0.0001) vX = 0;
-          if (Math.abs(vY) < 0.0001) vY = 0;
+          // Мертвая зона: убираем очень малые дрожания
+          if (Math.abs(vX) < 0.00008) vX = 0;
+          if (Math.abs(vY) < 0.00008) vY = 0;
         }
 
         camera.position.set(0, 1.62, 0);
