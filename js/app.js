@@ -1094,10 +1094,10 @@ function createOrbit(camera, canvas) {
 
     if (gyroActive) {
       dragOffX -= dx * SENS;
-      dragOffY += dy * SENS;
+      dragOffY -= dy * SENS;
       dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY));
     } else {
-      fallTheta -= dx * SENS;
+      fallTheta += dx * SENS;
       fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + dy * SENS));
     }
 
@@ -1137,9 +1137,9 @@ function createOrbit(camera, canvas) {
     vX = dx * SENS; vY = dy * SENS;
     if (gyroActive) {
       dragOffX -= dx * SENS;
-      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY + dy * SENS));
+      dragOffY  = Math.max(-1.2, Math.min(1.2, dragOffY - dy * SENS));
     } else {
-      fallTheta -= dx * SENS;
+      fallTheta += dx * SENS;
       fallPhi    = Math.max(0.15, Math.min(Math.PI - 0.15, fallPhi + dy * SENS));
     }
     lastX = e.clientX; lastY = e.clientY;
