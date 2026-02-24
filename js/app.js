@@ -685,31 +685,47 @@ function buildRoom(artist) {
   var panH = 2.8;  // Фиксированная высота
 
   if (infPath) {
-    new THREE.TextureLoader().load(
-      infPath,
-      function(tex) {
-        textures.push(tex);
-        
-        // Рассчитываем ширину на основе aspect ratio изображения
-        var imgWidth = tex.image.width;
-        var imgHeight = tex.image.height;
-        var aspectRatio = imgWidth / imgHeight;
-        var panW = panH * aspectRatio;
-        
-        // Создаём рамку с адаптированными размерами
-        addBox(panW + framePad*2, panH + framePad*2, 0.05,
-          0, 2.4, -rD/2 + 0.13, mFrame);
-        
-        var panel = new THREE.Mesh(
-          new THREE.BoxGeometry(panW, panH, 0.02),
-          createMaterial('lambert', { map: tex })
-        );
-        panel.position.set(0, 2.4, -rD/2 + 0.17);
-        roomGroup.add(panel);
-      },
-      undefined,
-      function() { fallbackPanel(); }
-    );
+    // Сначала предзагружаем изображение с правильными CORS атрибутами для iOS
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      // После успешной загрузки используем TextureLoader
+      var loader = new THREE.TextureLoader();
+      loader.setCrossOrigin('anonymous');
+      loader.load(
+        infPath,
+        function(tex) {
+          textures.push(tex);
+          
+          // Рассчитываем ширину на основе aspect ratio изображения
+          var imgWidth = tex.image.width;
+          var imgHeight = tex.image.height;
+          var aspectRatio = imgWidth / imgHeight;
+          var panW = panH * aspectRatio;
+          
+          // Создаём рамку с адаптированными размерами
+          addBox(panW + framePad*2, panH + framePad*2, 0.05,
+            0, 2.4, -rD/2 + 0.13, mFrame);
+          
+          var panel = new THREE.Mesh(
+            new THREE.BoxGeometry(panW, panH, 0.02),
+            createMaterial('lambert', { map: tex })
+          );
+          panel.position.set(0, 2.4, -rD/2 + 0.17);
+          roomGroup.add(panel);
+        },
+        undefined,
+        function(err) { 
+          console.warn('Failed to load infographic:', infPath, err);
+          fallbackPanel(); 
+        }
+      );
+    };
+    img.onerror = function() {
+      console.warn('Image preload failed for:', infPath);
+      fallbackPanel();
+    };
+    img.src = infPath;
   } else {
     fallbackPanel();
   }
@@ -1199,21 +1215,42 @@ function createOrbit(camera, canvas) {
   };
   on(window, 'deviceorientation', onOrient);
 
-  // iOS 13+ — запрашиваем разрешение при первом тапе
+  // iOS 13+ — запрашиваем разрешение с повторами
+  var permissionRequested = false;
   function tryEnableGyro() {
+    if (permissionRequested) return;
+    permissionRequested = true;
+    
     if (typeof DeviceOrientationEvent === 'undefined') return;
+    
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      on(canvas, 'touchend', function askPerm() {
-        DeviceOrientationEvent.requestPermission()
-          .then(function(r) { if (r === 'granted') hasGyro = true; })
-          .catch(function() {});
-        canvas.removeEventListener('touchend', askPerm);
-      }, { passive: true });
+      // На iOS 13+ нужно явно запросить разрешение
+      DeviceOrientationEvent.requestPermission()
+        .then(function(r) { 
+          if (r === 'granted') hasGyro = true; 
+          else permissionRequested = false; // Дозволяем повторить
+        })
+        .catch(function(err) {
+          console.warn('Gyroscope permission denied:', err);
+          permissionRequested = false; // Дозволяем повторить
+        });
     } else {
+      // Старые iOS или Android с поддержкой гироскопа без явного запроса
       hasGyro = true;
     }
   }
+  
+  // Пытаемся запросить разрешение сразу при инициализации
   tryEnableGyro();
+  
+  // Повторяем запрос на первый touchstart если ещё не разрешено
+  var gyroPermCheckHandler = function() {
+    if (!hasGyro) {
+      tryEnableGyro();
+    }
+    canvas.removeEventListener('touchstart', gyroPermCheckHandler);
+  };
+  on(canvas, 'touchstart', gyroPermCheckHandler, { passive: true });
 
   // ── UPDATE (каждый кадр) ─────────────────────────────────────
   return {
