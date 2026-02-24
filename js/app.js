@@ -681,17 +681,25 @@ function buildRoom(artist) {
   var infPath = artist.infographic && artist.infographic[S.lang]
     ? artist.infographic[S.lang] : null;
 
-  // Рамка главной панели
   var framePad = 0.12;
-  var panW = 5.0, panH = 2.8;
-  addBox(panW + framePad*2, panH + framePad*2, 0.05,
-    0, 2.4, -rD/2 + 0.13, mFrame);
+  var panH = 2.8;  // Фиксированная высота
 
   if (infPath) {
     new THREE.TextureLoader().load(
       infPath,
       function(tex) {
         textures.push(tex);
+        
+        // Рассчитываем ширину на основе aspect ratio изображения
+        var imgWidth = tex.image.width;
+        var imgHeight = tex.image.height;
+        var aspectRatio = imgWidth / imgHeight;
+        var panW = panH * aspectRatio;
+        
+        // Создаём рамку с адаптированными размерами
+        addBox(panW + framePad*2, panH + framePad*2, 0.05,
+          0, 2.4, -rD/2 + 0.13, mFrame);
+        
         var panel = new THREE.Mesh(
           new THREE.BoxGeometry(panW, panH, 0.02),
           createMaterial('lambert', { map: tex })
@@ -707,6 +715,11 @@ function buildRoom(artist) {
   }
 
   function fallbackPanel() {
+    // Для заглушки используем стандартное соотношение сторон (16:9)
+    var panW = panH * (16 / 9);
+    addBox(panW + framePad*2, panH + framePad*2, 0.05,
+      0, 2.4, -rD/2 + 0.13, mFrame);
+    
     var c = artColor.clone().multiplyScalar(0.85);
     addBox(panW, panH, 0.02, 0, 2.4, -rD/2 + 0.17,
       createMaterial('lambert', { color: c }));
