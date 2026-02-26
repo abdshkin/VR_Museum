@@ -1375,6 +1375,6 @@ document.addEventListener('DOMContentLoaded', function() {
     var loader = document.getElementById('loader');
     if (loader) loader.innerHTML =
       '<div style="color:#c44;font-family:sans-serif;padding:20px;text-align:center">' +
-      'Ошибка инициализации<br><small>' + err.message + '</small></div>';
+      'Ошибка ини<br><small>' + err.message + '</small></div>';
   });
 });
