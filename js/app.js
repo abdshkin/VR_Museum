@@ -542,16 +542,11 @@ function setupWebGLContext(renderer) {
   // Восстанавливаем контекст
   canvas.addEventListener('webglcontextrestored', function() {
     console.log('WebGL context restored');
-    // Перестраиваем сцену
-    if (threeCtx && threeCtx.renderer) {
-      threeCtx.renderer.render(threeCtx.scene, threeCtx.renderer.camera);
-    }
+    // Контекст восстановлен, renderer готов к использованию
   }, false);
   
   // iOS фиксы для WebGL
   if (getIsIOS()) {
-    // Отключаем MSAA (многопроходный антиалиасинг) на iOS для экономии памяти
-    var ext = gl.getExtension('WEBGL_lose_context');
     // Используем базовое буферирование для лучшей совместимости
     gl.hint(gl.FRAGMENT_SHADER_DERIVATIVE_HINT, gl.FASTEST);
   }
