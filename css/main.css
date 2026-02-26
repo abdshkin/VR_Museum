@@ -425,9 +425,11 @@ body {
   padding: 16px 24px calc(16px + var(--safe-bot));
   transform: translateY(100%);
   transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  z-index: 90;
-  max-height: 38vh;
-  overflow-y: auto;
+  z-index: 95;
+  max-height: 40vh;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
 #bio-panel.visible { transform: translateY(0); }
 
@@ -458,6 +460,8 @@ body {
   line-height: 1.65;
   color: rgba(237,232,224,0.8);
   margin-bottom: 16px;
+  max-height: 12vh;
+  overflow-y: auto;
 }
 
 /* ============================================================

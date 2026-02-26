@@ -221,13 +221,21 @@ function refreshBio() {
 function showBio() { 
   D.bioPanel.classList.add('visible');
   var footer = document.getElementById('app-footer');
-  if (footer) footer.style.opacity = '0';
+  if (footer) {
+    footer.style.opacity = '0';
+    footer.style.pointerEvents = 'none';
+    footer.style.visibility = 'hidden';
+  }
 }
 
 function hideBio() { 
   D.bioPanel.classList.remove('visible');
   var footer = document.getElementById('app-footer');
-  if (footer) footer.style.opacity = '1';
+  if (footer) {
+    footer.style.opacity = '1';
+    footer.style.pointerEvents = 'auto';
+    footer.style.visibility = 'visible';
+  }
 }
 
 function onCardClick(i) {
