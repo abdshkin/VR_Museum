@@ -154,7 +154,7 @@ function loadControlModePreference() {
 var textureCache = {};  // Кэш видимых текстур (path → THREE.Texture)
 var loadingPromises = {};  // Текущие загрузки (path → Promise)
 var TEXTURE_CACHE_MAX_AGE = 5 * 60 * 1000;  // 5 минут
-var TEXTURE_LOAD_TIMEOUT = 8000;  // 8 секунд таймаут
+var TEXTURE_LOAD_TIMEOUT = 15000;  // 15 секунд таймаут
 
 function getIsMobile() {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -266,6 +266,7 @@ function loadTextureOptimized(url) {
       function(err) {
         clearTimeout(timeoutId);
         delete loadingPromises[url];
+        console.error('Failed to load texture:', url, err);
         reject(err);
       }
     );
@@ -1451,7 +1452,7 @@ function createOrbit(camera, canvas, controlMode) {
   // ── ГИРОСКОП — кватернионный ─────────────────────────────────
   // Точная копия алгоритма из DeviceOrientationControls three.js r128
   var onOrient = function(e) {
-    if (!hasGyro || e.alpha == null) return;
+    if (!hasGyro || (e.alpha === null || e.alpha === undefined)) return;
 
     var alpha  = e.alpha  ? THREE.MathUtils.degToRad(e.alpha)  : 0;
     var beta   = e.beta   ? THREE.MathUtils.degToRad(e.beta)   : 0;
