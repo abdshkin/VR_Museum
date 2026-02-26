@@ -391,10 +391,37 @@ body {
   border-radius: 3px;
 }
 
+/* ---------- BIO ENTER BUTTON ---------- */
+#bio-enter-btn {
+  position: absolute;
+  bottom: calc(var(--safe-bot) + 230px);
+  left: 24px;
+  right: 24px;
+  display: none;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--accent) 100%);
+  color: var(--bg);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+  width: auto;
+  justify-content: center;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 55;
+}
+#bio-enter-btn:hover { opacity: 0.9; transform: scale(0.99); }
+
 /* ---------- BIO PANEL ---------- */
 #bio-panel {
   position: absolute;
-  bottom: calc(56px + var(--safe-bot));
+  bottom: calc(var(--safe-bot) + 56px);
   left: 0; right: 0;
   background: linear-gradient(to top, rgba(15,13,10,0.98) 0%, rgba(15,13,10,0.85) 100%);
   backdrop-filter: blur(16px);
@@ -404,7 +431,7 @@ body {
   transform: translateY(100%);
   transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   z-index: 50;
-  max-height: 38vh;
+  max-height: 25vh;
   overflow-y: auto;
 }
 #bio-panel.visible { transform: translateY(0); }
@@ -437,26 +464,6 @@ body {
   color: rgba(237,232,224,0.8);
   margin-bottom: 16px;
 }
-#bio-enter-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: linear-gradient(135deg, var(--gold) 0%, var(--accent) 100%);
-  color: var(--bg);
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  border: none;
-  border-radius: 8px;
-  padding: 12px 20px;
-  cursor: pointer;
-  width: 100%;
-  justify-content: center;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-#bio-enter-btn:hover { opacity: 0.9; transform: scale(0.99); }
 
 /* ============================================================
    ROOM VIEW (3D)

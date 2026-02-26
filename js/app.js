@@ -218,8 +218,15 @@ function refreshBio() {
   D.bioText.textContent  = artist.bio[S.lang]   || artist.bio.en   || '';
 }
 
-function showBio() { D.bioPanel.classList.add('visible'); }
-function hideBio() { D.bioPanel.classList.remove('visible'); }
+function showBio() { 
+  D.bioPanel.classList.add('visible');
+  if (D.bioEnterBtn) D.bioEnterBtn.style.display = 'flex';
+}
+
+function hideBio() { 
+  D.bioPanel.classList.remove('visible');
+  if (D.bioEnterBtn) D.bioEnterBtn.style.display = 'none';
+}
 
 function onCardClick(i) {
   goTo(i);
