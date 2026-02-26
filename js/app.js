@@ -107,10 +107,180 @@ var S = {
   autoTimer:    null,
   view:         'slider',
   activeArtist: null,
+  controlMode:  'gyro',  // 'gyro' или 'touch'
 };
 
 // DOM-ссылки (заполняются в init)
 var D = {};
+
+// ============================================================
+// УПРАВЛЕНИЕ РЕЖИМОМ КОНТРОЛЯ
+// ============================================================
+function setControlMode(mode) {
+  if (mode !== 'gyro' && mode !== 'touch') mode = 'gyro';
+  S.controlMode = mode;
+  localStorage.setItem('controlMode', mode);
+  
+  // Обновляем UI кнопок
+  var modeButtons = document.querySelectorAll('.control-mode-btn');
+  modeButtons.forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  
+  // Пересоздаём комнату если открыта, чтобы применить новый режим
+  if (S.view === 'room' && S.activeArtist && threeCtx) {
+    buildRoom(S.activeArtist);
+  }
+}
+
+function loadControlModePreference() {
+  var saved = localStorage.getItem('controlMode');
+  if (saved === 'touch' || saved === 'gyro') {
+    S.controlMode = saved;
+  } else {
+    S.controlMode = 'gyro';
+  }
+  
+  // Обновляем UI кнопок при загрузке
+  var modeButtons = document.querySelectorAll('.control-mode-btn');
+  modeButtons.forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.mode === S.controlMode);
+  });
+}
+
+// ============================================================
+// ОПТИМИЗИРОВАННАЯ ЗАГРУЗКА ИНФОГРАФИК
+// ============================================================
+var textureCache = {};  // Кэш видимых текстур (path → THREE.Texture)
+var loadingPromises = {};  // Текущие загрузки (path → Promise)
+var TEXTURE_CACHE_MAX_AGE = 5 * 60 * 1000;  // 5 минут
+var TEXTURE_LOAD_TIMEOUT = 8000;  // 8 секунд таймаут
+
+function getIsMobile() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+function getIsIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function getIsIPad() {
+  return /iPad/.test(navigator.userAgent) || (navigator.maxTouchPoints > 2 && /Macintosh/.test(navigator.userAgent));
+}
+
+function getDevicePixelRatioOptimized() {
+  var dpr = window.devicePixelRatio || 1;
+  var isIOS = getIsIOS();
+  var isMobile = getIsMobile();
+  
+  // Для iOS iPhone - ограничиваем DPR до максимум 2
+  if (isIOS && !getIsIPad()) {
+    return Math.min(dpr, 2);
+  }
+  
+  // Для iPad и Android планшетов - может быть выше
+  if (getIsIPad() || /android/i.test(navigator.userAgent) && screen.width > 600) {
+    return Math.min(dpr, 2.5);
+  }
+  
+  // Для обычных мобильных - 1.5 максимум
+  if (isMobile) {
+    return Math.min(dpr, 1.5);
+  }
+  
+  return Math.min(dpr, 2);
+}
+
+/**
+ * Загружает текстуру с кэшированием и оптимизацией размера
+ * @param {string} url - Путь к изображению
+ * @returns {Promise} Resolves с THREE.Texture или null
+ */
+function loadTextureOptimized(url) {
+  if (!url) return Promise.resolve(null);
+  
+  // Проверяем кэш
+  if (textureCache[url]) {
+    return Promise.resolve(textureCache[url]);
+  }
+  
+  // Возвращаем существующую загрузку если уже идёт
+  if (loadingPromises[url]) {
+    return loadingPromises[url];
+  }
+  
+  // Создаём новую загрузку с таймаутом
+  var promise = new Promise(function(resolve, reject) {
+    var timeoutId = setTimeout(function() {
+      reject(new Error('Texture load timeout: ' + url));
+    }, TEXTURE_LOAD_TIMEOUT);
+    
+    // Загружаем только один раз через ONE Image→TextureLoader
+    var loader = new THREE.TextureLoader();
+    loader.setCrossOrigin('anonymous');
+    
+    loader.load(
+      url,
+      function(texture) {
+        clearTimeout(timeoutId);
+        
+        // Оптимизируем текстуру
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.encoding = THREE.sRGBEncoding;
+        
+        // Сжимаем для мобильных устройств
+        if (getIsMobile() && texture.image) {
+          var maxSize;
+          var isIOS = getIsIOS();
+          
+          // Более агрессивное сжатие на iOS для экономии памяти
+          if (isIOS) {
+            // iPhone - максимум 512px
+            maxSize = getIsIPad() ? 768 : 512;
+          } else {
+            // Android - 1024px
+            maxSize = 1024;
+          }
+          
+          if (texture.image.width > maxSize || texture.image.height > maxSize) {
+            var scale = Math.min(maxSize / Math.max(texture.image.width, texture.image.height), 1);
+            texture.userData.scale = scale;
+            
+            // На очень слабых мобильных - еще больше сжимаем
+            if (navigator.deviceMemory && navigator.deviceMemory < 4) {
+              maxSize *= 0.75;
+              scale = Math.min(maxSize / Math.max(texture.image.width, texture.image.height), 1);
+              texture.userData.scale = scale;
+            }
+          }
+        }
+        
+        // Кэшируем
+        textureCache[url] = texture;
+        delete loadingPromises[url];
+        
+        resolve(texture);
+      },
+      undefined,  // progress
+      function(err) {
+        clearTimeout(timeoutId);
+        delete loadingPromises[url];
+        reject(err);
+      }
+    );
+  });
+  
+  loadingPromises[url] = promise;
+  return promise;
+}
+
+function clearTextureCache() {
+  Object.values(textureCache).forEach(function(tex) {
+    if (tex && tex.dispose) tex.dispose();
+  });
+  textureCache = {};
+}
 
 // ============================================================
 // ЗАГРУЗКА ДАННЫХ
@@ -126,6 +296,34 @@ async function loadArtists() {
     console.warn('Fallback to built-in data:', e.message);
     return ARTISTS_FALLBACK;
   }
+}
+
+/**
+ * Предварительно загружает инфографики соседних художников
+ * для быстрого переключения
+ */
+function preloadAdjacentInfographics(artistIndex) {
+  var adjacentIndices = [
+    (artistIndex - 1 + S.artists.length) % S.artists.length,
+    (artistIndex + 1) % S.artists.length
+  ];
+  
+  var langs = ['kz', 'ru', 'en'];
+  
+  adjacentIndices.forEach(function(idx) {
+    var artist = S.artists[idx];
+    if (artist && artist.infographic) {
+      langs.forEach(function(lang) {
+        var url = artist.infographic[lang];
+        if (url && !textureCache[url] && !loadingPromises[url]) {
+          // Запускаем загрузку в фоне (не ожидаем)
+          loadTextureOptimized(url).catch(function(err) {
+            // Молча игнорируем ошибки при фоновой загрузке
+          });
+        }
+      });
+    }
+  });
 }
 
 // ============================================================
@@ -180,6 +378,9 @@ function goTo(idx) {
   });
   S.activeArtist = S.artists[S.current];
   refreshBio();
+  
+  // Предварительно загружаем инфографики соседних художников
+  preloadAdjacentInfographics(S.current);
 }
 
 function next() { goTo(S.current + 1); }
@@ -322,6 +523,40 @@ function disposeGroup(group) {
   });
 }
 
+/**
+ * Инициализирует WebGL контекст с iOS-специфическими фиксами
+ */
+function setupWebGLContext(renderer) {
+  var gl = renderer.getContext();
+  if (!gl) return;
+  
+  // Обработка потери контекста WebGL (важно для iOS)
+  var canvas = renderer.domElement;
+  
+  // Слушаем потерю контекста
+  canvas.addEventListener('webglcontextlost', function(e) {
+    console.warn('WebGL context lost');
+    e.preventDefault();
+  }, false);
+  
+  // Восстанавливаем контекст
+  canvas.addEventListener('webglcontextrestored', function() {
+    console.log('WebGL context restored');
+    // Перестраиваем сцену
+    if (threeCtx && threeCtx.renderer) {
+      threeCtx.renderer.render(threeCtx.scene, threeCtx.renderer.camera);
+    }
+  }, false);
+  
+  // iOS фиксы для WebGL
+  if (getIsIOS()) {
+    // Отключаем MSAA (многопроходный антиалиасинг) на iOS для экономии памяти
+    var ext = gl.getExtension('WEBGL_lose_context');
+    // Используем базовое буферирование для лучшей совместимости
+    gl.hint(gl.FRAGMENT_SHADER_DERIVATIVE_HINT, gl.FASTEST);
+  }
+}
+
 // ── Фабрика материалов ─────────────────────────────────────
 
 function createMaterial(type, opts) {
@@ -435,14 +670,40 @@ function buildRoom(artist) {
   var H = container.clientHeight || window.innerHeight;
 
   // Renderer
-  var renderer = new THREE.WebGLRenderer({ antialias: true });
+  var renderer = new THREE.WebGLRenderer({ 
+    antialias: true,
+    alpha: false,
+    preserveDrawingBuffer: false,  // Важно для iOS
+    failIfMajorPerformanceCaveat: true  // Fallback если слабое устройство
+  });
+  
+  var isIOS = getIsIOS();
+  var isMobile = getIsMobile();
+  
+  // Оптимизированный pixel ratio для мобильных
+  var pixelRatio = getDevicePixelRatioOptimized();
+  renderer.setPixelRatio(pixelRatio);
+  
   renderer.setSize(W, H);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.autoUpdate = true;
   renderer.toneMapping       = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
+  
+  // iOS Safari специфичные настройки
+  if (isIOS) {
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.physicallyCorrectLights = false;  // Экономим ресурсы на iOS
+  }
+  
   container.appendChild(renderer.domElement);
+  
+  // Добавляем touch-action для корректной обработки жестов
+  renderer.domElement.style.touchAction = 'none';
+  
+  // Инициализируем WebGL контекст с iOS фиксами
+  setupWebGLContext(renderer);
 
   // Scene
   var scene = new THREE.Scene();
@@ -497,16 +758,31 @@ function buildRoom(artist) {
     scene.add(sp.target);
   });
 
+  // === ОПТИМИЗАЦИЯ ДЛЯ МОБИЛЬНЫХ ===
+  if (isMobile) {
+    // Уменьшаем качество shadow map на мобильных
+    renderer.shadowMap.type = THREE.BasicShadowMap;
+    dirLight.shadow.mapSize.set(512, 512);
+    chandPt.shadow.mapSize.set(256, 256);
+    spotMain.shadow.mapSize.set(256, 256);
+    
+    // Отключаем some lights на слабых мобильных для лучшей производительности
+    if (getIsIPad() === false && navigator.deviceMemory && navigator.deviceMemory < 4) {
+      chandPt.intensity *= 0.8;  // Уменьшаем интенсивность люстры
+    }
+  }
+
   // ── Геометрия ──────────────────────────────────────────
 
   var textures = []; // для dispose
   var rW = 8, rH = 4.8, rD = 10;
   var artColor = new THREE.Color(artist.color || '#c4843a');
 
-  // Материалы
-  var parquetTex = makeParquetTexture(512);
+  // Материалы - оптимизируем размер текстур для мобильных
+  var textureSize = isMobile ? 256 : 512;  // Уменьшаем размер текстур для мобильных
+  var parquetTex = makeParquetTexture(textureSize);
   textures.push(parquetTex);
-  var wallTex    = makeWallTexture(512);
+  var wallTex    = makeWallTexture(textureSize);
   textures.push(wallTex);
 
   var matDefs = {
@@ -599,7 +875,8 @@ function buildRoom(artist) {
 
   // ── Ковёр ─────────────────────────────────────────────
 
-  var rugTex = makeRugTexture(artist.color, 256);
+  var rugSize = isMobile ? 128 : 256;  // Уменьшаем размер для мобильных
+  var rugTex = makeRugTexture(artist.color, rugSize);
   textures.push(rugTex);
   var rugMat = createMaterial('lambert', { map: rugTex });
   var rug = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.025, 5.5), rugMat);
@@ -685,47 +962,37 @@ function buildRoom(artist) {
   var panH = 2.8;  // Фиксированная высота
 
   if (infPath) {
-    // Сначала предзагружаем изображение с правильными CORS атрибутами для iOS
-    var img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = function() {
-      // После успешной загрузки используем TextureLoader
-      var loader = new THREE.TextureLoader();
-      loader.setCrossOrigin('anonymous');
-      loader.load(
-        infPath,
-        function(tex) {
-          textures.push(tex);
-          
-          // Рассчитываем ширину на основе aspect ratio изображения
-          var imgWidth = tex.image.width;
-          var imgHeight = tex.image.height;
-          var aspectRatio = imgWidth / imgHeight;
-          var panW = panH * aspectRatio;
-          
-          // Создаём рамку с адаптированными размерами
-          addBox(panW + framePad*2, panH + framePad*2, 0.05,
-            0, 2.4, -rD/2 + 0.13, mFrame);
-          
-          var panel = new THREE.Mesh(
-            new THREE.BoxGeometry(panW, panH, 0.02),
-            createMaterial('lambert', { map: tex })
-          );
-          panel.position.set(0, 2.4, -rD/2 + 0.17);
-          roomGroup.add(panel);
-        },
-        undefined,
-        function(err) { 
-          console.warn('Failed to load infographic:', infPath, err);
-          fallbackPanel(); 
+    // Используем оптимизированную загрузку с кэшем и таймаутом
+    loadTextureOptimized(infPath)
+      .then(function(tex) {
+        if (!tex || !tex.image) {
+          fallbackPanel();
+          return;
         }
-      );
-    };
-    img.onerror = function() {
-      console.warn('Image preload failed for:', infPath);
-      fallbackPanel();
-    };
-    img.src = infPath;
+        
+        textures.push(tex);
+        
+        // Рассчитываем ширину на основе aspect ratio изображения
+        var imgWidth = tex.image.width;
+        var imgHeight = tex.image.height;
+        var aspectRatio = imgWidth / imgHeight;
+        var panW = panH * aspectRatio;
+        
+        // Создаём рамку с адаптированными размерами
+        addBox(panW + framePad*2, panH + framePad*2, 0.05,
+          0, 2.4, -rD/2 + 0.13, mFrame);
+        
+        var panel = new THREE.Mesh(
+          new THREE.BoxGeometry(panW, panH, 0.02),
+          createMaterial('lambert', { map: tex })
+        );
+        panel.position.set(0, 2.4, -rD/2 + 0.17);
+        roomGroup.add(panel);
+      })
+      .catch(function(err) { 
+        console.warn('Failed to load infographic:', infPath, err.message);
+        fallbackPanel(); 
+      });
   } else {
     fallbackPanel();
   }
@@ -920,7 +1187,7 @@ var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080, 0x883010, 0x308
 
   // ── Orbit controls ────────────────────────────────────
 
-  var orbit = createOrbit(camera, renderer.domElement);
+  var orbit = createOrbit(camera, renderer.domElement, S.controlMode);
 
   // ── Resize через ResizeObserver ───────────────────────
 
@@ -938,6 +1205,19 @@ var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080, 0x883010, 0x308
     resizeObserver.observe(container);
   } else {
     window.addEventListener('resize', onResize);
+  }
+  
+  // iOS ориентация смена (важна для правильного пересчета размеров)
+  if (getIsIOS()) {
+    window.addEventListener('orientationchange', function() {
+      // Задержка для iOS, чтобы размеры обновились
+      setTimeout(onResize, 100);
+    }, false);
+    
+    // Также слушаем visualViewportChange для iOS Safari 13+
+    if (typeof window.visualViewport !== 'undefined') {
+      window.visualViewport.addEventListener('resize', onResize, false);
+    }
   }
 
   // ── Сохраняем контекст ────────────────────────────────
@@ -998,31 +1278,67 @@ function destroyRoom() {
   } else {
     window.removeEventListener('resize', threeCtx.onResize);
   }
+  
+  // iOS: убираем обработчиков ориентации
+  if (getIsIOS()) {
+    window.removeEventListener('orientationchange', function(){});
+    if (typeof window.visualViewport !== 'undefined') {
+      window.visualViewport.removeEventListener('resize', function(){});
+    }
+  }
 
   // Освобождаем геометрию и материалы
   if (threeCtx.scene) {
     threeCtx.scene.traverse(function(obj) {
       if (obj.isMesh) disposeMesh(obj);
+      if (obj.light) obj.light.dispose && obj.light.dispose();
     });
   }
 
   // Освобождаем текстуры
   if (threeCtx.textures) {
-    threeCtx.textures.forEach(function(t) { t.dispose(); });
+    threeCtx.textures.forEach(function(t) { 
+      if (t && t.dispose) {
+        t.dispose(); 
+      }
+    });
   }
 
-  threeCtx.renderer.dispose();
+  // Очищаем кэш текстур для освобождения памяти
+  clearTextureCache();
+
+  // Полностью очищаем renderer
+  if (threeCtx.renderer) {
+    threeCtx.renderer.dispose();
+    
+    // На iOS - явно очищаем WebGL контекст
+    if (getIsIOS()) {
+      var canvas = threeCtx.renderer.domElement;
+      var gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
+      if (gl) {
+        var ext = gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+      }
+    }
+  }
+  
   var canvas = threeCtx.renderer.domElement;
   if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
 
   threeCtx = null;
+  
+  // Запускаем garbage collector на iOS (если есть)
+  if (navigator.gc && typeof navigator.gc === 'function') {
+    navigator.gc();
+  }
 }
 
 // ============================================================
 // ORBIT + QUATERNION GYRO CONTROLS
 // Google Street View style: drag look-around + pinch zoom + gyroscope
 // ============================================================
-function createOrbit(camera, canvas) {
+function createOrbit(camera, canvas, controlMode) {
+  controlMode = controlMode || 'gyro';
 
   var FOV_DEF = 65;    // начальный FOV
   var FOV_MIN = 20;    // максимальный зум (~3x)
@@ -1218,6 +1534,12 @@ function createOrbit(camera, canvas) {
   // iOS 13+ — запрашиваем разрешение с повторами
   var permissionRequested = false;
   function tryEnableGyro() {
+    // Не запрашиваем разрешение если включен режим 'touch' (только касание)
+    if (controlMode === 'touch') {
+      hasGyro = false;
+      return;
+    }
+    
     if (permissionRequested) return;
     permissionRequested = true;
     
@@ -1240,12 +1562,14 @@ function createOrbit(camera, canvas) {
     }
   }
   
-  // Пытаемся запросить разрешение сразу при инициализации
-  tryEnableGyro();
+  // Пытаемся запросить разрешение сразу при инициализации (если режим не 'touch')
+  if (controlMode !== 'touch') {
+    tryEnableGyro();
+  }
   
   // Повторяем запрос на первый touchstart если ещё не разрешено
   var gyroPermCheckHandler = function() {
-    if (!hasGyro) {
+    if (controlMode !== 'touch' && !hasGyro) {
       tryEnableGyro();
     }
     canvas.removeEventListener('touchstart', gyroPermCheckHandler);
@@ -1305,6 +1629,9 @@ function createOrbit(camera, canvas) {
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 async function init() {
+  // Загружаем сохранённый режим управления
+  loadControlModePreference();
+  
   var domIds = ['loader','sliderView','roomView','track','trackWrap','dots','prevBtn','nextBtn','bioPanel',
                  'bioName','bioYears','bioText','bioEnterBtn','bioLabel','roomContainer','roomLabelName',
                  'roomLabelYears','gyroHint','roomBackBtn'];
@@ -1315,6 +1642,7 @@ async function init() {
     D[key] = document.getElementById(htmlIds[i]);
   });
   D.langBtns = document.querySelectorAll('.lang-btn');
+  D.controlModeBtns = document.querySelectorAll('.control-mode-btn');
 
   // Проверяем критичные элементы
   var missing = ['track','trackWrap','dots','bioPanel','roomContainer'].filter(function(k) { return !D[k]; });
@@ -1358,6 +1686,11 @@ async function init() {
 
   D.langBtns.forEach(function(btn) {
     btn.addEventListener('click', function() { setLang(btn.dataset.lang); });
+  });
+
+  // События кнопок режима управления
+  D.controlModeBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() { setControlMode(btn.dataset.mode); });
   });
 
   // Автопрокрутка

@@ -34,7 +34,12 @@
 
 /* ---------- RESET ---------- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { height: 100%; overflow: hidden; }
+html { 
+  height: 100%; 
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
 body {
   height: 100%;
   background: var(--bg);
@@ -43,8 +48,14 @@ body {
   font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
   overflow: hidden;
   user-select: none;
+  
+  /* iOS Safari fix - предотвращает зум на double-tap */
+  touch-action: manipulation;
 }
 
 /* ============================================================
@@ -470,8 +481,51 @@ body {
   position: absolute;
   inset: 0;
   z-index: 1;
+  background: #0a0806;
+  
+  /* iOS Safari фиксы */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  
+  /* Оптимизация рендеринга */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+  
+  /* Предотвращаем масштабирование и зум жесты */
+  -webkit-user-scalable: no;
+  
+  /* Оптимизация для мобильных */
+  will-change: auto;
 }
-#aframe-container canvas { display: block; }
+
+#aframe-container canvas { 
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  
+  /* iOS Safari оптимизация */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  
+  /* Убираем глюки рендеринга */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+  
+  /* Оптимизация для предотвращения "jelly" эффекта на iOS */
+  -webkit-font-smoothing: antialiased;
+  -webkit-app-region: no-drag;
+  
+  /* Убираем outline при фокусе */
+  outline: none;
+}
 
 /* ---------- ROOM UI OVERLAY ---------- */
 #room-ui {
@@ -505,6 +559,51 @@ body {
   z-index: 200;
 }
 #room-back-btn:hover { background: rgba(212,168,83,0.18); border-color: var(--gold); }
+
+/* ──────────────────────────────────────────────────────────── */
+/* Control Mode Selector */
+/* ──────────────────────────────────────────────────────────── */
+#control-mode-selector {
+  position: absolute;
+  top: calc(var(--safe-top) + var(--header-h) + 12px);
+  right: 16px;
+  pointer-events: all;
+  display: flex;
+  gap: 8px;
+  background: rgba(15,13,10,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(212,168,83,0.4);
+  border-radius: 8px;
+  padding: 6px;
+  z-index: 200;
+}
+
+.control-mode-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--trans-fast);
+  white-space: nowrap;
+}
+
+.control-mode-btn:hover {
+  background: rgba(212,168,83,0.08);
+  color: var(--gold-light);
+}
+
+.control-mode-btn.active {
+  background: rgba(212,168,83,0.15);
+  border-color: rgba(212,168,83,0.4);
+  color: var(--gold);
+}
 
 #room-label {
   position: absolute;
@@ -632,6 +731,69 @@ body {
   .card-image-wrap { max-height: 55vh; aspect-ratio: 4/5; }
   #slider-container { max-width: 500px; }
 }
+
+/* iOS Safari специфичные стили */
+@supports (padding: max(0px)) {
+  /* Использует safe-area-inset для правильного размещения у элементов с notch */
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+  
+  #hdr {
+    padding-left: max(16px, env(safe-area-inset-left, 16px));
+    padding-right: max(16px, env(safe-area-inset-right, 16px));
+  }
+  
+  #room-back-btn {
+    left: max(16px, env(safe-area-inset-left, 16px));
+  }
+  
+  #room-label {
+    left: max(16px, env(safe-area-inset-left, 16px));
+    right: max(16px, env(safe-area-inset-right, 16px));
+  }
+}
+
+/* Оптимизация для iPad (ландшафтная ориентация) */
+@media (min-width: 1024px) and (min-height: 600px) {
+  #slider-view {
+    padding-top: calc(var(--header-h) + 20px);
+  }
+}
+
+/* Оптимизация для горизонтальной ориентации */
+@media (max-height: 500px) {
+  .section-title {
+    margin-bottom: 16px;
+    font-size: clamp(18px, 4vw, 24px);
+  }
+  
+  #slider-container {
+    max-height: 60vh;
+  }
+  
+  #slider-dots {
+    margin-top: 8px;
+  }
+}
+
+/* Оптимизация для очень узких экранов (iPhone SE, старые iPhone) */
+@media (max-width: 375px) {
+  .logo {
+    font-size: 13px;
+  }
+  
+  .logo small {
+    font-size: 8px;
+  }
+  
+  .lang-btn {
+    font-size: 9px;
+    padding: 4px 7px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }

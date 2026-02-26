@@ -2,10 +2,12 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no, minimal-ui" />
   <meta name="theme-color" content="#0f0d0a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Виртуалды Мұражай" />
+  <meta name="format-detection" content="telephone=no" />
   <meta name="description" content="Виртуалды мұражай — Virtual Museum of Kazakh Artists" />
   <title>Қазақ Суретшілері | Виртуалды Мұражай</title>
 
@@ -104,6 +106,16 @@
         <button id="room-back-btn" aria-label="Вернуться в галерею">
           ← Назад
         </button>
+
+        <!-- Control mode selector -->
+        <div id="control-mode-selector" aria-label="Режим управления">
+          <button class="control-mode-btn active" data-mode="gyro" title="Гироскоп + движение пальцем">
+            🧭 Гиро
+          </button>
+          <button class="control-mode-btn" data-mode="touch" title="Только движение пальцем">
+            👆 Касание
+          </button>
+        </div>
 
         <div id="gyro-hint" role="tooltip">
           📱 Перетяни для осмотра
