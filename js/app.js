@@ -220,12 +220,14 @@ function refreshBio() {
 
 function showBio() { 
   D.bioPanel.classList.add('visible');
-  if (D.bioEnterBtn) D.bioEnterBtn.style.display = 'flex';
+  var footer = document.getElementById('app-footer');
+  if (footer) footer.style.opacity = '0';
 }
 
 function hideBio() { 
   D.bioPanel.classList.remove('visible');
-  if (D.bioEnterBtn) D.bioEnterBtn.style.display = 'none';
+  var footer = document.getElementById('app-footer');
+  if (footer) footer.style.opacity = '1';
 }
 
 function onCardClick(i) {
