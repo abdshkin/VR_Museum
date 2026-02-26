@@ -663,42 +663,29 @@ function buildRoom(artist) {
   var container = D.roomContainer;
   var W = container.clientWidth  || window.innerWidth;
   var H = container.clientHeight || window.innerHeight;
+  
+  // Убеждаемся что есть размеры
+  if (W <= 0 || H <= 0) {
+    console.error('Invalid container dimensions:', W, H);
+    return;
+  }
 
   // Renderer
-  var renderer = new THREE.WebGLRenderer({ 
-    antialias: true,
-    alpha: false,
-    preserveDrawingBuffer: false,  // Важно для iOS
-    failIfMajorPerformanceCaveat: true  // Fallback если слабое устройство
-  });
-  
+  var renderer = new THREE.WebGLRenderer({ antialias: true });
   var isIOS = getIsIOS();
   var isMobile = getIsMobile();
   
-  // Оптимизированный pixel ratio для мобильных
-  var pixelRatio = getDevicePixelRatioOptimized();
-  renderer.setPixelRatio(pixelRatio);
-  
   renderer.setSize(W, H);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
-  renderer.shadowMap.autoUpdate = true;
   renderer.toneMapping       = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   
-  // iOS Safari специфичные настройки
-  if (isIOS) {
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.physicallyCorrectLights = false;  // Экономим ресурсы на iOS
-  }
-  
   container.appendChild(renderer.domElement);
-  
+
   // Добавляем touch-action для корректной обработки жестов
   renderer.domElement.style.touchAction = 'none';
-  
-  // Инициализируем WebGL контекст с iOS фиксами
-  setupWebGLContext(renderer);
 
   // Scene
   var scene = new THREE.Scene();
@@ -760,11 +747,6 @@ function buildRoom(artist) {
     dirLight.shadow.mapSize.set(512, 512);
     chandPt.shadow.mapSize.set(256, 256);
     spotMain.shadow.mapSize.set(256, 256);
-    
-    // Отключаем some lights на слабых мобильных для лучшей производительности
-    if (getIsIPad() === false && navigator.deviceMemory && navigator.deviceMemory < 4) {
-      chandPt.intensity *= 0.8;  // Уменьшаем интенсивность люстры
-    }
   }
 
   // ── Геометрия ──────────────────────────────────────────
@@ -1201,19 +1183,6 @@ var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080, 0x883010, 0x308
   } else {
     window.addEventListener('resize', onResize);
   }
-  
-  // iOS ориентация смена (важна для правильного пересчета размеров)
-  if (getIsIOS()) {
-    window.addEventListener('orientationchange', function() {
-      // Задержка для iOS, чтобы размеры обновились
-      setTimeout(onResize, 100);
-    }, false);
-    
-    // Также слушаем visualViewportChange для iOS Safari 13+
-    if (typeof window.visualViewport !== 'undefined') {
-      window.visualViewport.addEventListener('resize', onResize, false);
-    }
-  }
 
   // ── Сохраняем контекст ────────────────────────────────
 
@@ -1271,14 +1240,8 @@ function destroyRoom() {
   if (threeCtx.resizeObserver) {
     threeCtx.resizeObserver.disconnect();
   } else {
-    window.removeEventListener('resize', threeCtx.onResize);
-  }
-  
-  // iOS: убираем обработчиков ориентации
-  if (getIsIOS()) {
-    window.removeEventListener('orientationchange', function(){});
-    if (typeof window.visualViewport !== 'undefined') {
-      window.visualViewport.removeEventListener('resize', function(){});
+    if (threeCtx.onResize) {
+      window.removeEventListener('resize', threeCtx.onResize);
     }
   }
 
@@ -1286,7 +1249,6 @@ function destroyRoom() {
   if (threeCtx.scene) {
     threeCtx.scene.traverse(function(obj) {
       if (obj.isMesh) disposeMesh(obj);
-      if (obj.light) obj.light.dispose && obj.light.dispose();
     });
   }
 
@@ -1305,27 +1267,12 @@ function destroyRoom() {
   // Полностью очищаем renderer
   if (threeCtx.renderer) {
     threeCtx.renderer.dispose();
-    
-    // На iOS - явно очищаем WebGL контекст
-    if (getIsIOS()) {
-      var canvas = threeCtx.renderer.domElement;
-      var gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
-      if (gl) {
-        var ext = gl.getExtension('WEBGL_lose_context');
-        if (ext) ext.loseContext();
-      }
-    }
   }
   
   var canvas = threeCtx.renderer.domElement;
   if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
 
   threeCtx = null;
-  
-  // Запускаем garbage collector на iOS (если есть)
-  if (navigator.gc && typeof navigator.gc === 'function') {
-    navigator.gc();
-  }
 }
 
 // ============================================================
