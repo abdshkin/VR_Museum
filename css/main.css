@@ -433,6 +433,59 @@ body {
 }
 #bio-panel.visible { transform: translateY(0); }
 
+/* ── Подсказка об ориентации телефона ─────────────────────────── */
+.phone-orientation-hint {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 13, 10, 0.95);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  opacity: 1;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+.phone-orientation-hint.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.phone-orientation-content {
+  text-align: center;
+  padding: 40px 30px;
+  animation: slideInPhone 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.phone-orientation-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  animation: bouncePhone 2s infinite;
+}
+.phone-orientation-text {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 12px;
+}
+.phone-orientation-subtext {
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+@keyframes slideInPhone {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes bouncePhone {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
 .bio-label {
   font-size: 9px;
   font-weight: 500;

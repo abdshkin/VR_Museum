@@ -15,6 +15,8 @@ var LANG = {
     bio:       'Суретші туралы',
     eyebrow:   'Қазақстан · Өнер · Art',
     title:     'Ұлы Суретшілер',
+    phoneHint: 'Телефонды тік ұстаңыз',
+    phoneHintSub: '3D арқылы ынамдықты іс жүргіңіз',
   },
   ru: {
     back:      '← Назад',
@@ -24,6 +26,8 @@ var LANG = {
     bio:       'О художнике',
     eyebrow:   'Казахстан · Искусство · Art',
     title:     'Великие художники',
+    phoneHint: 'Держите телефон прямо',
+    phoneHintSub: 'Для лучшего взаимодействия с 3D',
   },
   en: {
     back:      '← Back',
@@ -33,6 +37,8 @@ var LANG = {
     bio:       'About the Artist',
     eyebrow:   'Kazakhstan · Өнер · Art',
     title:     'Great Artists',
+    phoneHint: 'Hold your phone upright',
+    phoneHintSub: 'For better 3D experience',
   },
 };
 
@@ -268,6 +274,7 @@ function setLang(lang) {
     btn.classList.toggle('active', btn.dataset.lang === lang);
   });
   updateLangText(lang);
+  updatePhoneOrientationHint(lang);
 
   // Метка в зале
   if (S.activeArtist && D.roomLabelName) {
@@ -281,6 +288,31 @@ function setLang(lang) {
   // Перестраиваем зал если открыт (обновляет инфографику на нужном языке)
   if (S.view === 'room' && S.activeArtist && threeCtx) {
     buildRoom(S.activeArtist);
+  }
+}
+
+// ============================================================
+// ПОДСКАЗКА ОБ ОРИЕНТАЦИИ ТЕЛЕФОНА
+// ============================================================
+function updatePhoneOrientationHint(lang) {
+  var hintText = document.getElementById('phone-orientation-text');
+  var hintSubtext = document.getElementById('phone-orientation-subtext');
+  if (hintText) hintText.textContent = LANG[lang].phoneHint;
+  if (hintSubtext) hintSubtext.textContent = LANG[lang].phoneHintSub;
+}
+
+function hidePhoneOrientationHint() {
+  var hint = document.getElementById('phone-orientation-hint');
+  if (hint) {
+    hint.classList.add('hidden');
+  }
+}
+
+function showPhoneOrientationHint() {
+  var hint = document.getElementById('phone-orientation-hint');
+  if (hint) {
+    hint.classList.remove('hidden');
+    updatePhoneOrientationHint(S.lang);
   }
 }
 
@@ -1333,6 +1365,12 @@ async function init() {
 
   // Применяем переводы
   setLang('kz');
+
+  // Показываем подсказку об ориентации телефона на 5 секунд
+  showPhoneOrientationHint();
+  setTimeout(function() {
+    hidePhoneOrientationHint();
+  }, 5000);
 
   // События кнопок
   var btnEvents = [
