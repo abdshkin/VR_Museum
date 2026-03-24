@@ -816,12 +816,24 @@ function buildRoom(artist) {
     });
   }
 
-  // Конфигурация для главной и задней стен
+  // Конфигурация для 4-х стен (передняя, боковые, задняя)
   var wallConfigs = {
     main: {
       framePos: new THREE.Vector3(0, 2.4, -rD/2 + 0.13),
       panelPos: new THREE.Vector3(0, 2.4, -rD/2 + 0.17),
       rotation: { y: 0 },  // передняя стена - без поворота
+      meshGroup: null
+    },
+    left: {
+      framePos: new THREE.Vector3(-rW/2 + 0.20, 2.4, -0.5),
+      panelPos: new THREE.Vector3(-rW/2 + 0.18, 2.4, -0.5),
+      rotation: { y: Math.PI / 2 },  // левая стена - поворот на 90 градусов
+      meshGroup: null
+    },
+    right: {
+      framePos: new THREE.Vector3(rW/2 - 0.20, 2.4, 0.5),
+      panelPos: new THREE.Vector3(rW/2 - 0.18, 2.4, 0.5),
+      rotation: { y: -Math.PI / 2 },  // правая стена - поворот на -90 градусов
       meshGroup: null
     },
     back: {
@@ -835,8 +847,13 @@ function buildRoom(artist) {
   // Загружаем main картину на переднюю стену
   addPaintingToWall('main', wallConfigs.main);
 
-  // Загружаем заднюю картину (боковые удалены)
-  addPaintingToWall(3, wallConfigs.back);
+  // Загружаем боковые и заднюю картины
+  var sidePositions = ['left', 'right', 'back'];
+  var sideNumbers = [1, 2, 3];
+  
+  sideNumbers.forEach(function(num, idx) {
+    addPaintingToWall(num, wallConfigs[sidePositions[idx]]);
+  });
 
   // ── Старый код (заглушки) был здесь, но теперь заменён на новую систему ────
 
