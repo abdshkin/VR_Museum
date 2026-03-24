@@ -816,24 +816,12 @@ function buildRoom(artist) {
     });
   }
 
-  // Конфигурация для 4-х стен
+  // Конфигурация для главной и задней стен
   var wallConfigs = {
     main: {
       framePos: new THREE.Vector3(0, 2.4, -rD/2 + 0.13),
       panelPos: new THREE.Vector3(0, 2.4, -rD/2 + 0.17),
       rotation: { y: 0 },  // передняя стена - без поворота
-      meshGroup: null
-    },
-    left: {
-      framePos: new THREE.Vector3(-rW/2 + 0.20, 2.4, -0.5),
-      panelPos: new THREE.Vector3(-rW/2 + 0.18, 2.4, -0.5),
-      rotation: { y: Math.PI / 2 },  // левая стена - поворот на 90 градусов
-      meshGroup: null
-    },
-    right: {
-      framePos: new THREE.Vector3(rW/2 - 0.20, 2.4, 0.5),
-      panelPos: new THREE.Vector3(rW/2 - 0.18, 2.4, 0.5),
-      rotation: { y: -Math.PI / 2 },  // правая стена - поворот на -90 градусов
       meshGroup: null
     },
     back: {
@@ -847,148 +835,12 @@ function buildRoom(artist) {
   // Загружаем main картину на переднюю стену
   addPaintingToWall('main', wallConfigs.main);
 
-  // Загружаем боковые/заднюю картины
-  var sidePositions = ['left', 'right', 'back'];
-  var sideNumbers = [1, 2, 3];
-  
-  sideNumbers.forEach(function(num, idx) {
-    addPaintingToWall(num, wallConfigs[sidePositions[idx]]);
-  });
+  // Загружаем заднюю картину (боковые удалены)
+  addPaintingToWall(3, wallConfigs.back);
 
   // ── Старый код (заглушки) был здесь, но теперь заменён на новую систему ────
 
 
-
-
-    // ── Книжный шкаф ─────────────────────────────────────
-  //
-  // Шкаф прижат к левой стене (x = -rW/2 + 0.06).
-  // Все координаты внутри shelfGroup локальные.
-  //
-  // Размеры шкафа:
-  //   ширина  (по оси X от стены)  = cabinetDepth  = 0.35
-  //   высота  (по оси Y)           = cabinetH      = 2.2
-  //   длина   (по оси Z)           = cabinetW      = 1.5
-  //
-  // В мировых координатах шкаф стоит у левой стены,
-  // центр группы: x = -rW/2 + 0.06, z = -1.5
-
-  var shelfGroup = new THREE.Group();
-  shelfGroup.position.set(-rW/2 + 0.06, 0, -1.5);
-  roomGroup.add(shelfGroup);
-
-  var cabinetDepth = 0.35;   // глубина (уходит от стены по +X)
-  var cabinetW     = 1.5;    // ширина вдоль стены (по Z)
-  var cabinetH     = 2.2;    // высота
-  var wallThick    = 0.04;   // толщина стенок/полок
-
-  // Центр шкафа по X (от стены): половина глубины
-  var cabCX = cabinetDepth / 2;
-  // Центр шкафа по Y: половина высоты (стоит на полу)
-  var cabCY = cabinetH / 2;
-
-  // Задняя стенка (вплотную к стене)
-  addBox(wallThick, cabinetH, cabinetW,
-    wallThick / 2, cabCY, 0, mDark, shelfGroup);
-
-  // Левая боковая стенка (по оси Z)
-  addBox(cabinetDepth, cabinetH, wallThick,
-    cabCX, cabCY, -cabinetW / 2 + wallThick / 2, mDark, shelfGroup);
-
-  // Правая боковая стенка
-  addBox(cabinetDepth, cabinetH, wallThick,
-    cabCX, cabCY,  cabinetW / 2 - wallThick / 2, mDark, shelfGroup);
-
-  // Верхняя крышка
-  addBox(cabinetDepth, wallThick, cabinetW,
-    cabCX, cabinetH - wallThick / 2, 0, mMoldD, shelfGroup);
-
-  // Нижнее основание (немного выступает вперёд)
-  addBox(cabinetDepth + 0.04, wallThick, cabinetW + 0.04,
-    cabCX, wallThick / 2, 0, mMoldD, shelfGroup);
-
-  // Полки: Y-позиции верхней грани каждой полки
-  // (книги будут стоять сверху)
-  var shelfTopY = [0.62, 1.12, 1.62];   // 3 полки
-
-  shelfTopY.forEach(function(topY) {
-    addBox(cabinetDepth, wallThick, cabinetW - wallThick * 2,
-      cabCX, topY - wallThick / 2, 0, mMoldD, shelfGroup);
-  });
-
-  // Молдинг-карниз поверх шкафа
-  addBox(cabinetDepth + 0.06, 0.06, cabinetW + 0.06,
-    cabCX, cabinetH + 0.03, 0, mMold, shelfGroup);
-
-  // ── Книги на полках ──────────────────────────────────
-  //
-  // Книги стоят вертикально на полке.
-  // Их нижняя грань = topY полки.
-  // X-центр книги = wallThick (задняя стенка) + глубина книги / 2
-  // Z расставляем от левого края к правому.
-var bColors = [0x8b2020, 0x205080, 0x206040, 0x806020, 0x602080, 0x883010, 0x308070, 0x7a3020];
-
-  var bookDepth   = 0.22;   // глубина книги (от задней стенки вперёд)
-  var bookXCenter = wallThick + bookDepth / 2 + 0.01; // небольшой зазор от задней стенки
-
-  // Данные для каждой полки: сколько книг и смещение по Z
-  var shelfData = [
-    { topY: shelfTopY[0], count: 9,  zOffset: 0 },
-    { topY: shelfTopY[1], count: 7,  zOffset: 0.05 },
-    { topY: shelfTopY[2], count: 8,  zOffset: -0.05 }
-  ];
-
-  shelfData.forEach(function(shelf, si) {
-    var zCursor = -cabinetW / 2 + wallThick + 0.04; // старт по Z (левый край)
-
-    for (var bi = 0; bi < shelf.count; bi++) {
-      var bookW  = 0.1 + Math.random() * 0.06;   // толщина корешка
-      var bookH  = 0.20 + Math.random() * 0.12;  // высота книги
-      var colorIdx = (bi + si * 3) % bColors.length;
-
-      // Небольшой случайный наклон — только если книга не крайняя
-      var tilt = (bi > 0 && bi < shelf.count - 1) ? (Math.random() - 0.5) * 0.08 : 0;
-
-      var book = new THREE.Mesh(
-        new THREE.BoxGeometry(bookDepth, bookH, bookW),
-        createMaterial('lambert', { color: bColors[colorIdx] })
-      );
-
-      // Позиция: нижняя грань = shelf.topY  →  центр Y = topY + bookH/2
-      book.position.set(
-        bookXCenter,
-        shelf.topY + bookH / 2,
-        zCursor + bookW / 2 + shelf.zOffset
-      );
-      book.rotation.z = tilt;
-
-      // Корешок — тонкая полоска другого цвета
-      var spineColor = new THREE.Color(bColors[colorIdx]).addScalar(0.15);
-      var spine = new THREE.Mesh(
-        new THREE.BoxGeometry(bookDepth + 0.002, bookH - 0.01, 0.005),
-        createMaterial('lambert', { color: spineColor })
-      );
-      spine.position.copy(book.position);
-      spine.position.z -= bookW / 2 - 0.003; // передний торец
-      spine.rotation.z = tilt;
-      shelfGroup.add(spine);
-
-      shelfGroup.add(book);
-      zCursor += bookW + 0.008; // зазор между книгами
-
-      // Не выходим за пределы полки
-      if (zCursor > cabinetW / 2 - wallThick - 0.06) break;
-    }
-
-    // Декоративная фигурка в конце полки (небольшой цилиндр)
-    var figH = 0.14 + Math.random() * 0.06;
-    var fig = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.025, 0.03, figH, 8),
-      createMaterial('lambert', { color: 0xd4a853 })
-    );
-    fig.position.set(bookXCenter, shelf.topY + figH / 2, cabinetW / 2 - wallThick - 0.07);
-    shelfGroup.add(fig);
-  });
   // ── Скамейка для посетителей ──────────────────────────
 
   var benchGroup = new THREE.Group();
