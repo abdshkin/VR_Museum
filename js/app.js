@@ -442,6 +442,57 @@ function makeRugTexture(color, size) {
   return new THREE.CanvasTexture(canvas);
 }
 
+// ── LOD Loader для инфографик ─────────────────────────────
+
+/**
+ * Загружает изображение с системой LOD (Level of Detail)
+ * Сначала грузит 250kb (низкое качество), потом 1mb, потом original
+ * @param {string} basePath - путь без размера/расширения (e.g., "assets/images/infographics/artist/artist_main_en")
+ * @param {string} lang - язык (kz, ru, en)
+ * @param {function} onLODLoad - callback(tex, lod) где lod = 1,2,3
+ * @param {function} onError - callback на ошибку
+ */
+function loadImageWithLOD(basePathWithLang, onLODLoad, onError) {
+  var sizes = ['250kb', '1mb', 'original'];
+  var currentLOD = 0;
+
+  function loadNextLOD() {
+    if (currentLOD >= sizes.length) return;
+    
+    var size = sizes[currentLOD];
+    var fullPath = basePathWithLang + '_' + size + '.png';
+
+    var loader = new THREE.TextureLoader();
+    loader.setCrossOrigin('anonymous');
+    loader.load(
+      fullPath,
+      function(tex) {
+        currentLOD++;
+        onLODLoad(tex, currentLOD);
+        // Продолжаем загружать следующую версию
+        loadNextLOD();
+      },
+      undefined,
+      function(err) {
+        // Если ошибка на первом (250kb) - попробуем следующий
+        if (currentLOD === 0) {
+          currentLOD = 1;
+          loadNextLOD();
+        } else if (currentLOD === 1) {
+          // Если ошибка на 1mb - попробуем original
+          currentLOD = 2;
+          loadNextLOD();
+        } else {
+          // Все версии не загрузились
+          if (onError) onError(err);
+        }
+      }
+    );
+  }
+
+  loadNextLOD();
+}
+
 // ── Основная функция ───────────────────────────────────────
 
 function buildRoom(artist) {
@@ -698,65 +749,107 @@ function buildRoom(artist) {
   var infPath = artist.infographic && artist.infographic[S.lang]
     ? artist.infographic[S.lang] : null;
 
+  // ── 4 стены с инфографикой (LOD система) ────────────────
+
   var framePad = 0.12;
-  var panH = 2.8;  // Фиксированная высота
+  var panH = 2.8;
 
-  if (infPath) {
-    // Сначала предзагружаем изображение с правильными CORS атрибутами для iOS
-    var img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = function() {
-      // После успешной загрузки используем TextureLoader
-      var loader = new THREE.TextureLoader();
-      loader.setCrossOrigin('anonymous');
-      loader.load(
-        infPath,
-        function(tex) {
-          textures.push(tex);
-          
-          // Рассчитываем ширину на основе aspect ratio изображения
-          var imgWidth = tex.image.width;
-          var imgHeight = tex.image.height;
-          var aspectRatio = imgWidth / imgHeight;
-          var panW = panH * aspectRatio;
-          
-          // Создаём рамку с адаптированными размерами
-          addBox(panW + framePad*2, panH + framePad*2, 0.05,
-            0, 2.4, -rD/2 + 0.13, mFrame);
-          
-          var panel = new THREE.Mesh(
-            new THREE.BoxGeometry(panW, panH, 0.02),
-            createMaterial('lambert', { map: tex })
-          );
-          panel.position.set(0, 2.4, -rD/2 + 0.17);
-          roomGroup.add(panel);
-        },
-        undefined,
-        function(err) { 
-          console.warn('Failed to load infographic:', infPath, err);
-          fallbackPanel(); 
+  // Определяем пути based на структуре папок (новые художники в папках)
+  function getInflGraphicPath(position, lang) {
+    var artistId = artist.id;
+    var positionStr = position === 'main' ? 'main' : position;
+    var folderPath = 'assets/images/infographics/' + artistId + '/' + artistId + '_' + positionStr + '_' + lang;
+    return folderPath;
+  }
+
+  // Функция для добавления картины на стену с LOD
+  function addPaintingToWall(position, wallConfig) {
+    var basePath = getInflGraphicPath(position, S.lang);
+
+    loadImageWithLOD(basePath, function(tex, lod) {
+      // Рассчитываем размер на основе aspect ratio
+      var imgWidth = tex.image.width;
+      var imgHeight = tex.image.height;
+      var aspectRatio = imgWidth / imgHeight;
+      var panW = panH * aspectRatio;
+
+      // Если это первая загрузка (250kb) - создаём раму
+      if (lod === 1) {
+        var frameColor = position === 'main' ? '#7a5512' : '#5a3512';
+        var frameMat = createMaterial('lambert', { color: frameColor });
+        var frame = new THREE.Mesh(
+          new THREE.BoxGeometry(panW + framePad*2, panH + framePad*2, 0.05),
+          frameMat
+        );
+        frame.position.copy(wallConfig.framePos);
+        frame.userData.wallPos = position; // сохраняем позицию для внутренних отсчётов
+        roomGroup.add(frame);
+
+        // Создаём группу для картины на этой стене
+        if (!wallConfig.meshGroup) {
+          wallConfig.meshGroup = new THREE.Group();
+          wallConfig.meshGroup.position.copy(wallConfig.panelPos);
+          roomGroup.add(wallConfig.meshGroup);
         }
+      }
+
+      // Обновляем или создаём материал картины
+      var panelMat = createMaterial('lambert', { map: tex });
+      
+      // Удаляем старую картину если существует
+      while (wallConfig.meshGroup.children.length > 0) {
+        wallConfig.meshGroup.remove(wallConfig.meshGroup.children[0]);
+      }
+
+      var panel = new THREE.Mesh(
+        new THREE.BoxGeometry(panW, panH, 0.02),
+        panelMat
       );
-    };
-    img.onerror = function() {
-      console.warn('Image preload failed for:', infPath);
-      fallbackPanel();
-    };
-    img.src = infPath;
-  } else {
-    fallbackPanel();
+      wallConfig.meshGroup.add(panel);
+      textures.push(tex);
+    }, function(err) {
+      console.warn('Failed to load painting at position ' + position + ':', err);
+    });
   }
 
-  function fallbackPanel() {
-    // Для заглушки используем стандартное соотношение сторон (16:9)
-    var panW = panH * (16 / 9);
-    addBox(panW + framePad*2, panH + framePad*2, 0.05,
-      0, 2.4, -rD/2 + 0.13, mFrame);
-    
-    var c = artColor.clone().multiplyScalar(0.85);
-    addBox(panW, panH, 0.02, 0, 2.4, -rD/2 + 0.17,
-      createMaterial('lambert', { color: c }));
-  }
+  // Конфигурация для 4-х стен
+  var wallConfigs = {
+    main: {
+      framePos: new THREE.Vector3(0, 2.4, -rD/2 + 0.13),
+      panelPos: new THREE.Vector3(0, 2.4, -rD/2 + 0.17),
+      meshGroup: null
+    },
+    left: {
+      framePos: new THREE.Vector3(-rW/2 + 0.58, 2.4, -1.0),
+      panelPos: new THREE.Vector3(-rW/2 + 0.62, 2.4, -1.0),
+      meshGroup: null
+    },
+    right: {
+      framePos: new THREE.Vector3(rW/2 - 0.58, 2.4, 1.0),
+      panelPos: new THREE.Vector3(rW/2 - 0.62, 2.4, 1.0),
+      meshGroup: null
+    },
+    back: {
+      framePos: new THREE.Vector3(0, 2.4, rD/2 - 0.13),
+      panelPos: new THREE.Vector3(0, 2.4, rD/2 - 0.17),
+      meshGroup: null
+    }
+  };
+
+  // Загружаем main картину на переднюю стену
+  addPaintingToWall('main', wallConfigs.main);
+
+  // Загружаем боковые/заднюю картины
+  var sidePositions = ['left', 'right', 'back'];
+  var sideNumbers = [1, 2, 3];
+  
+  sideNumbers.forEach(function(num, idx) {
+    addPaintingToWall(num, wallConfigs[sidePositions[idx]]);
+  });
+
+  // ── Старый код (заглушки) был здесь, но теперь заменён на новую систему ────
+
+
 
 
     // ── Книжный шкаф ─────────────────────────────────────

@@ -104,6 +104,90 @@
         "ru": "assets/images/infographics/kasteev_ru.jpg",
         "en": "assets/images/infographics/kasteev_en.jpg"
       }
+    },
+    {
+      "id": "akanaev",
+      "years": "1913 – 1963",
+      "color": "#9a6b3a",
+      "name": {
+        "kz": "Мәжіт Ақанаев",
+        "ru": "Межит Акаев",
+        "en": "Mezhit Akanaev"
+      },
+      "bio": {
+        "kz": "Халық суретшісі, Қазақстан кескіндемесінің дамуына әрлі-берлі үлес қосқан сәулетші. Оның туындылары қазақтың табиғаты және мәдениетінің терең түсіндірмесін берге",
+        "ru": "Народный художник Казахстана, внёсший значительный вклад в развитие казахской живописи. Его работы отражают глубокую связь с природой и культурой казахского народа.",
+        "en": "Renowned painter who contributed significantly to the development of Kazakh art. His works reflect a deep connection to the nature and culture of the Kazakh people."
+      },
+      "thumb": "assets/images/thumbs/akanaev_thumb.jpg",
+      "infographic": {
+        "kz": "assets/images/infographics/akanaev/akanaev_main",
+        "ru": "assets/images/infographics/akanaev/akanaev_main",
+        "en": "assets/images/infographics/akanaev/akanaev_main"
+      }
+    },
+    {
+      "id": "hludov",
+      "years": "1889 – 1943",
+      "color": "#5a8c6a",
+      "name": {
+        "kz": "Николай Хлудов",
+        "ru": "Николай Хлудов",
+        "en": "Nikolai Khludov"
+      },
+      "bio": {
+        "kz": "Советтік әйел суретші, қазақ кескіндемесінің ұстави. Абылхан Қастеевтың шеберханасының негізін қалаушы.",
+        "ru": "Советская художница, учитель казахской живописи. Основательница мастерской, в которой учился Абылхан Кастеев.",
+        "en": "Soviet painter and mentor of Kazakh art. Founded the workshop where Abylkhan Kasteev studied and developed his talent."
+      },
+      "thumb": "assets/images/thumbs/hludov_thumb.jpg",
+      "infographic": {
+        "kz": "assets/images/infographics/hludov/hludov_main",
+        "ru": "assets/images/infographics/hludov/hludov_main",
+        "en": "assets/images/infographics/hludov/hludov_main"
+      }
+    },
+    {
+      "id": "kenbaev",
+      "years": "1930 – н.в.",
+      "color": "#c4843a",
+      "name": {
+        "kz": "Рзибала Кенбаев",
+        "ru": "Рзибала Кенбаев",
+        "en": "Rzibala Kenbaev"
+      },
+      "bio": {
+        "kz": "Қазақ кескіндемесінің күрделі және құлпырған өндіктемесі. Оның туындылары өзгерістердің дәуірін сезімдейді, бүгінгі Қазақстанның портреті.",
+        "ru": "Выдающийся представитель современной казахской живописи. Его произведения отражают изменяющееся лицо Казахстана и дух наших времён.",
+        "en": "Distinguished contemporary painter exploring the evolution of Kazakh identity and the changing face of modern Kazakhstan."
+      },
+      "thumb": "assets/images/thumbs/kenbaev_thumb.jpg",
+      "infographic": {
+        "kz": "assets/images/infographics/kenbaev/kenbaev_main",
+        "ru": "assets/images/infographics/kenbaev/kenbaev_main",
+        "en": "assets/images/infographics/kenbaev/kenbaev_main"
+      }
+    },
+    {
+      "id": "mambeev",
+      "years": "1935 – 2012",
+      "color": "#8b4a6a",
+      "name": {
+        "kz": "Рахимжан Мамбеев",
+        "ru": "Рахимжан Мамбеев",
+        "en": "Rakhimzhan Mambeev"
+      },
+      "bio": {
+        "kz": "Әйел суретшісі, қазақ балалық және ынамдылық туындыларының авторы. Оның қалам өнері үйренді детальдарын өндік сөз бен сүңгі түйлері біліндіреді.",
+        "ru": "Выдающаяся художница, известная своими портретами и жанровыми сценами из жизни казахского народа. Её работы отличаются эмоциональной глубиной и мастерством композиции.",
+        "en": "Prominent artist celebrated for her moving portraits and scenes of Kazakh life. Her works are renowned for their emotional depth and compositional mastery."
+      },
+      "thumb": "assets/images/thumbs/mambeev_thumb.jpg",
+      "infographic": {
+        "kz": "assets/images/infographics/mambeev/mambeev_main",
+        "ru": "assets/images/infographics/mambeev/mambeev_main",
+        "en": "assets/images/infographics/mambeev/mambeev_main"
+      }
     }
   ]
 }
