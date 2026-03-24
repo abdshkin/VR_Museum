@@ -773,19 +773,9 @@ function buildRoom(artist) {
       var aspectRatio = imgWidth / imgHeight;
       var panW = panH * aspectRatio;
 
-      // Если это первая загрузка (250kb) - создаём раму
+      // Если это первая загрузка (250kb) - создаём раму и группу
       if (lod === 1) {
-        var frameColor = position === 'main' ? '#7a5512' : '#5a3512';
-        var frameMat = createMaterial('lambert', { color: frameColor });
-        var frame = new THREE.Mesh(
-          new THREE.BoxGeometry(panW + framePad*2, panH + framePad*2, 0.05),
-          frameMat
-        );
-        frame.position.copy(wallConfig.framePos);
-        frame.userData.wallPos = position; // сохраняем позицию для внутренних отсчётов
-        roomGroup.add(frame);
-
-        // Создаём группу для картины на этой стене
+        // Создаём группу для картины на этой стене (если еще не создана)
         if (!wallConfig.meshGroup) {
           wallConfig.meshGroup = new THREE.Group();
           wallConfig.meshGroup.position.copy(wallConfig.panelPos);
@@ -795,20 +785,37 @@ function buildRoom(artist) {
           }
           roomGroup.add(wallConfig.meshGroup);
         }
+
+        // Очищаем старые дети при первой загрузке
+        while (wallConfig.meshGroup.children.length > 0) {
+          wallConfig.meshGroup.remove(wallConfig.meshGroup.children[0]);
+        }
+
+        var frameColor = position === 'main' ? '#7a5512' : '#5a3512';
+        var frameMat = createMaterial('lambert', { color: frameColor });
+        var frame = new THREE.Mesh(
+          new THREE.BoxGeometry(panW + framePad*2, panH + framePad*2, 0.05),
+          frameMat
+        );
+        frame.position.set(0, 0, 0);  // локальная позиция внутри meshGroup
+        frame.isFrame = true;  // пометка для рамы
+        wallConfig.meshGroup.add(frame);
       }
 
       // Обновляем или создаём материал картины
       var panelMat = createMaterial('lambert', { map: tex });
       
-      // Удаляем старую картину если существует
-      while (wallConfig.meshGroup.children.length > 0) {
-        wallConfig.meshGroup.remove(wallConfig.meshGroup.children[0]);
+      // Удаляем старую картину (не раму) если существует другая версия LOD
+      if (wallConfig.meshGroup.children.length > 1) {
+        // Удаляем последнего ребенка (предыдущая картинка)
+        wallConfig.meshGroup.remove(wallConfig.meshGroup.children[wallConfig.meshGroup.children.length - 1]);
       }
-
+      
       var panel = new THREE.Mesh(
         new THREE.BoxGeometry(panW, panH, 0.02),
         panelMat
       );
+      panel.position.set(0, 0, 0.02);  // локальная позиция внутри meshGroup
       wallConfig.meshGroup.add(panel);
       textures.push(tex);
     }, function(err) {
