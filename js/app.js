@@ -789,6 +789,10 @@ function buildRoom(artist) {
         if (!wallConfig.meshGroup) {
           wallConfig.meshGroup = new THREE.Group();
           wallConfig.meshGroup.position.copy(wallConfig.panelPos);
+          // Применяем rotation для боковых стен
+          if (wallConfig.rotation && wallConfig.rotation.y !== undefined) {
+            wallConfig.meshGroup.rotation.y = wallConfig.rotation.y;
+          }
           roomGroup.add(wallConfig.meshGroup);
         }
       }
@@ -817,21 +821,25 @@ function buildRoom(artist) {
     main: {
       framePos: new THREE.Vector3(0, 2.4, -rD/2 + 0.13),
       panelPos: new THREE.Vector3(0, 2.4, -rD/2 + 0.17),
+      rotation: { y: 0 },  // передняя стена - без поворота
       meshGroup: null
     },
     left: {
-      framePos: new THREE.Vector3(-rW/2 + 0.58, 2.4, -1.0),
-      panelPos: new THREE.Vector3(-rW/2 + 0.62, 2.4, -1.0),
+      framePos: new THREE.Vector3(-rW/2 + 0.20, 2.4, -0.5),
+      panelPos: new THREE.Vector3(-rW/2 + 0.18, 2.4, -0.5),
+      rotation: { y: Math.PI / 2 },  // левая стена - поворот на 90 градусов
       meshGroup: null
     },
     right: {
-      framePos: new THREE.Vector3(rW/2 - 0.58, 2.4, 1.0),
-      panelPos: new THREE.Vector3(rW/2 - 0.62, 2.4, 1.0),
+      framePos: new THREE.Vector3(rW/2 - 0.20, 2.4, 0.5),
+      panelPos: new THREE.Vector3(rW/2 - 0.18, 2.4, 0.5),
+      rotation: { y: -Math.PI / 2 },  // правая стена - поворот на -90 градусов
       meshGroup: null
     },
     back: {
       framePos: new THREE.Vector3(0, 2.4, rD/2 - 0.13),
       panelPos: new THREE.Vector3(0, 2.4, rD/2 - 0.17),
+      rotation: { y: Math.PI },  // задняя стена - поворот на 180 градусов
       meshGroup: null
     }
   };
