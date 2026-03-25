@@ -107,17 +107,17 @@
     },
     {
       "id": "akanaev",
-      "years": "1913 – 1963",
+      "years": "1948 – н.в.",
       "color": "#9a6b3a",
       "name": {
-        "kz": "Мәжіт Ақанаев",
-        "ru": "Межит Акаев",
-        "en": "Mezhit Akanaev"
+        "kz": "Амандос Әтібекұлы Аканаев",
+        "ru": "Амандос Атибекович Аканаев",
+        "en": "Amandos Atibekovich Akanaev"
       },
       "bio": {
-        "kz": "Халық суретшісі, Қазақстан кескіндемесінің дамуына әрлі-берлі үлес қосқан сәулетші. Оның туындылары қазақтың табиғаты және мәдениетінің терең түсіндірмесін берге",
-        "ru": "Народный художник Казахстана, внёсший значительный вклад в развитие казахской живописи. Его работы отражают глубокую связь с природой и культурой казахского народа.",
-        "en": "Renowned painter who contributed significantly to the development of Kazakh art. His works reflect a deep connection to the nature and culture of the Kazakh people."
+        "kz": "Қазақстандық суретші, Қазақстан Республикасының мемлекеттік сыйлығының лауреаты әндеулемінде және өнерде (2010). Мичурина елді мекенінде (қазіргі Энбекші) Алматы облысында туылған. Н.В. Гоголь атындағы Алматы өнеркөл училищесін бітірген (1967) және кейіннен живопись оқыту. 'Неотрадиционализм' стилінің жүйелеушісі, еуропалық дәстүрлерді Азия номадтық өнеріндегі пластикасымен байланыстырса, құрылымдалған әндеулемені металл, теңткелі ұстақы және ағашпен пайдалану; 'Қазақстан Республикасы Өнер академиясы' қорының ағымындағы мәдени мұра сақтау ынамындағы ағартушысы.",
+        "ru": "Казахстанский художник, лауреат Государственной премии РК в области литературы и искусства (2010). Родился в поселке Мичурина (ныне Энбекши) Алматинской области. Окончил Алматинское художественное училище им. Н.В. Гоголя (1967), где позже преподавал живопись. Создатель стиля 'неотрадиционализм', сочетающего европейские традиции с пластикой номадного искусства Азии, используя рельефную живопись с металлом, текстилем и деревом; инициатор фонда 'Академия художеств РК' по сохранению культурного наследия.",
+        "en": "Kazakhstani artist, laureate of the State Prize of the Republic of Kazakhstan in Literature and the Arts (2010). Born in the settlement of Michurina (now Enbekshi) in Almaty region. Graduated from the N.V. Gogol Almaty School of Art (1967), where he later taught painting. Creator of the 'neo-traditionalism' style, combining European traditions with the plasticity of Asian nomadic art, using relief painting with metal, textiles and wood; initiator of the 'Academy of the Arts of the RK' fund for the preservation of cultural heritage."
       },
       "thumb": "assets/images/thumbs/akanaev_thumb.JPG",
       "infographic": {
@@ -128,17 +128,17 @@
     },
     {
       "id": "hludov",
-      "years": "1889 – 1943",
+      "years": "1850 – 1935",
       "color": "#5a8c6a",
       "name": {
-        "kz": "Николай Хлудов",
-        "ru": "Николай Хлудов",
-        "en": "Nikolai Khludov"
+        "kz": "Николай Гаврилович Хлудов",
+        "ru": "Николай Гаврилович Хлудов",
+        "en": "Nikolai Gavrilovich Khludov"
       },
       "bio": {
-        "kz": "Советтік әйел суретші, қазақ кескіндемесінің ұстави. Абылхан Қастеевтың шеберханасының негізін қалаушы.",
-        "ru": "Советская художница, учитель казахской живописи. Основательница мастерской, в которой учился Абылхан Кастеев.",
-        "en": "Soviet painter and mentor of Kazakh art. Founded the workshop where Abylkhan Kasteev studied and developed his talent."
+        "kz": "Қазақ халқының өмірі мен өндіктемесіне өнігеген орыс портреттеу суретшісі және живопистсі (1850–1935). Брянскте туылған, XIX ғасырдың соңынан бастап Түркістанда жұмыс істеген, Тянь-Шань және Вернодағы жер сілінісін зерттеу экспедициясына қатысқан. Түркістан археология құлшысы шеңберінің мүшесі, Семиречелік Орыс географиялық қоғамының бөлімінің институторы, советтік кезінде сызба оқыту және Абылхан Қастеев сияқты алғашқы қазақ және қырғыз суретшілерін дайындап оқытушы болған.",
+        "ru": "Русский художник-портретист и живописец (1850–1935), посвятивший творчество жизни и быту казахского народа. Родился в Брянске и с конца XIX века работал в Туркестане, участвуя в экспедициях по изучению Тянь-Шаня и землетрясения в Верном. Был членом Туркестанского кружка любителей археологии, учредителем Семиреченского отдела Русского географического общества. В советское время преподавал рисование и подготовил первых казахских и киргизских художников, таких как Абылхан Кастеев.",
+        "en": "Russian portrait painter and artist (1850–1935) dedicated to the life and culture of the Kazakh people. Born in Bryansk and worked in Turkestan from the late 19th century, participating in expeditions studying the Tian-Shan and the Verny earthquake. Member of the Turkestan Circle of Archaeology Enthusiasts and founder of the Semirechensk Department of the Russian Geographical Society. In Soviet times he taught drawing and trained the first Kazakh and Kyrgyz artists, such as Abylkhan Kasteev."
       },
       "thumb": "assets/images/thumbs/hludov_thumb.JPG",
       "infographic": {
@@ -149,17 +149,17 @@
     },
     {
       "id": "kenbaev",
-      "years": "1930 – н.в.",
+      "years": "1925 – 1993",
       "color": "#c4843a",
       "name": {
-        "kz": "Рзибала Кенбаев",
-        "ru": "Рзибала Кенбаев",
-        "en": "Rzibala Kenbaev"
+        "kz": "Молдахмет Сыздықұлы Кенбаев",
+        "ru": "Молдахмет Сыздыкович Кенбаев",
+        "en": "Moldakmet Syzdykovich Kenbaev"
       },
       "bio": {
-        "kz": "Қазақ кескіндемесінің күрделі және құлпырған өндіктемесі. Оның туындылары өзгерістердің дәуірін сезімдейді, бүгінгі Қазақстанның портреті.",
-        "ru": "Выдающийся представитель современной казахской живописи. Его произведения отражают изменяющееся лицо Казахстана и дух наших времён.",
-        "en": "Distinguished contemporary painter exploring the evolution of Kazakh identity and the changing face of modern Kazakhstan."
+        "kz": "Қазақтың алғашқы кәсіби суретшілерінің бірі (1925–1993). Қазақ КСР халық суретшісі (1985), өнердің құрмет ісесі (1963), профессор. Қостанай облысының Сартол ауылында туылған, Алматы балалық ошағында өндіктелген. Алматы өнеркөл училищесін бітірген (1948) және Мәскеу өнер институтын бітірген (1956). Қазақстан суретшілер одағына басшылық істеген (1956–1959), Алма-Ата ҚАШ және архитектура-құрылыс институтында оқытушылық істеген.",
+        "ru": "Один из первых казахских профессиональных художников (1925–1993), народный художник Казахской ССР (1985), заслуженный деятель искусств (1963), профессор. Родился в ауле Сартол Костанайской области, воспитывался в алматинском детском доме. Окончил Алматинское художественное училище (1948) и Московский художественный институт (1956). Возглавлял Казахстанский союз художников (1956–1959), преподавал в политехническом и архитектурно-строительном институтах Алма-Аты.",
+        "en": "One of the first professional Kazakh artists (1925–1993), People's Artist of the Kazakh SSR (1985), Honored Figure of the Arts (1963), professor. Born in the aul of Sartol in Kostanay region, grew up in an Almaty orphanage. Graduated from the Almaty School of Art (1948) and the Moscow Institute of Art (1956). Led the Kazakhstan Union of Artists (1956–1959), taught at the Polytechnic and Architecture-Construction Institutes in Alma-Ata."
       },
       "thumb": "assets/images/thumbs/kenbaev_thumb.JPG",
       "infographic": {
@@ -170,17 +170,17 @@
     },
     {
       "id": "mambeev",
-      "years": "1935 – 2012",
+      "years": "1928 – 2017",
       "color": "#8b4a6a",
       "name": {
-        "kz": "Рахимжан Мамбеев",
-        "ru": "Рахимжан Мамбеев",
-        "en": "Rakhimzhan Mambeev"
+        "kz": "Сабур Абдырасұлы Мамбеев",
+        "ru": "Сабур Абдурасулович Мамбеев",
+        "en": "Sabur Abdurasulovich Mambeev"
       },
       "bio": {
-        "kz": "Әйел суретшісі, қазақ балалық және ынамдылық туындыларының авторы. Оның қалам өнері үйренді детальдарын өндік сөз бен сүңгі түйлері біліндіреді.",
-        "ru": "Выдающаяся художница, известная своими портретами и жанровыми сценами из жизни казахского народа. Её работы отличаются эмоциональной глубиной и мастерством композиции.",
-        "en": "Prominent artist celebrated for her moving portraits and scenes of Kazakh life. Her works are renowned for their emotional depth and compositional mastery."
+        "kz": "Кеңестік және қазақстандық суретші-живопистсі (1928–2017). Қазақ КСР халық суретшісі (1980), өнердің құрмет ісесі (1963). Н.В. Гоголь атындағы Алматы өнеркөл училищесін бітірген (1946) және И.Е. Репин атындағы Ленинград институтын бітірген (1953). 1953–1956 жылдар аралығында Алма-Ата өнеркөл училищесінде оқытушы болып, 1956 жылы КСРО суретшілер одағының мүшесі болған. Психологиялық портреттері және лаконикалық пейзаждарымен танымал.",
+        "ru": "Советский и казахстанский художник-живописец (1928–2017), народный художник Казахской ССР (1980), заслуженный деятель искусств (1963). Окончил Алматинское художественное училище им. Н.В. Гоголя (1946) и Ленинградский институт им. И.Е. Репина (1953). С 1953 по 1956 год преподавал в Алма-Атинском художественном училище, стал членом Союза художников СССР в 1956 году. Известен психологическими портретами и лаконичными пейзажами.",
+        "en": "Soviet and Kazakhstani painter (1928–2017), People's Artist of the Kazakh SSR (1980), Honored Figure of the Arts (1963). Graduated from the N.V. Gogol Almaty School of Art (1946) and the I.E. Repin Leningrad Institute (1953). From 1953 to 1956 he taught at the Alma-Ata School of Art, became a member of the Union of Soviet Artists in 1956. Known for his psychological portraits and concise landscapes."
       },
       "thumb": "assets/images/thumbs/mambeev_thumb.JPG",
       "infographic": {

@@ -453,6 +453,7 @@ body {
 .phone-orientation-hint.hidden {
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
 }
 .phone-orientation-content {
   text-align: center;

@@ -101,6 +101,50 @@ var ARTISTS_FALLBACK = [
     thumb: 'assets/images/thumbs/kasteev_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/kasteev_kz.jpg', ru: 'assets/images/infographics/kasteev_ru.jpg', en: 'assets/images/infographics/kasteev_en.jpg' },
   },
+  {
+    id: 'hludov', years: '1850 – 1935', color: '#5a8c6a',
+    name: { kz: 'Николай Гаврилович Хлудов', ru: 'Николай Гаврилович Хлудов', en: 'Nikolai Gavrilovich Khludov' },
+    bio: {
+      kz: 'Қазақ халқының өмірі мен өндіктемесіне өнігеген орыс портреттеу суретшісі және живопистсі (1850–1935). Брянскте туылған, XIX ғасырдың соңынан бастап Түркістанда жұмыс істеген, Тянь-Шань және Вернодағы жер сілінісін зерттеу экспедициясына қатысқан. Түркістан археология құлшысы шеңберінің мүшесі, Семиречелік Орыс географиялық қоғамының бөлімінің институторы, советтік кезінде сызба оқыту және Абылхан Қастеев сияқты алғашқы қазақ және қырғыз суретшілерін дайындап оқытушы болған.',
+      ru: 'Русский художник-портретист и живописец (1850–1935), посвятивший творчество жизни и быту казахского народа. Родился в Брянске и с конца XIX века работал в Туркестане, участвуя в экспедициях по изучению Тянь-Шаня и землетрясения в Верном. Был членом Туркестанского кружка любителей археологии, учредителем Семиреченского отдела Русского географического общества. В советское время преподавал рисование и подготовил первых казахских и киргизских художников, таких как Абылхан Кастеев.',
+      en: 'Russian portrait painter and artist (1850–1935) dedicated to the life and culture of the Kazakh people. Born in Bryansk and worked in Turkestan from the late 19th century, participating in expeditions studying the Tian-Shan and the Verny earthquake. Member of the Turkestan Circle of Archaeology Enthusiasts and founder of the Semirechensk Department of the Russian Geographical Society. In Soviet times he taught drawing and trained the first Kazakh and Kyrgyz artists, such as Abylkhan Kasteev.',
+    },
+    thumb: 'assets/images/thumbs/hludov_thumb.JPG',
+    infographic: { kz: 'assets/images/infographics/hludov/hludov_main', ru: 'assets/images/infographics/hludov/hludov_main', en: 'assets/images/infographics/hludov/hludov_main' },
+  },
+  {
+    id: 'mambeev', years: '1928 – 2017', color: '#8b4a6a',
+    name: { kz: 'Сабур Абдырасұлы Мамбеев', ru: 'Сабур Абдурасулович Мамбеев', en: 'Sabur Abdurasulovich Mambeev' },
+    bio: {
+      kz: 'Кеңестік және қазақстандық суретші-живопистсі (1928–2017). Қазақ КСР халық суретшісі (1980), өнердің құрмет ісесі (1963). Н.В. Гоголь атындағы Алматы өнеркөл училищесін бітірген (1946) және И.Е. Репин атындағы Ленинград институтын бітірген (1953). 1953–1956 жылдар аралығында Алма-Ата өнеркөл училищесінде оқытушы болып, 1956 жылы КСРО суретшілер одағының мүшесі болған. Психологиялық портреттері және лаконикалық пейзаждарымен танымал.',
+      ru: 'Советский и казахстанский художник-живописец (1928–2017), народный художник Казахской ССР (1980), заслуженный деятель искусств (1963). Окончил Алматинское художественное училище им. Н.В. Гоголя (1946) и Ленинградский институт им. И.Е. Репина (1953). С 1953 по 1956 год преподавал в Алма-Атинском художественном училище, стал членом Союза художников СССР в 1956 году. Известен психологическими портретами и лаконичными пейзажами.',
+      en: 'Soviet and Kazakhstani painter (1928–2017), People\'s Artist of the Kazakh SSR (1980), Honored Figure of the Arts (1963). Graduated from the N.V. Gogol Almaty School of Art (1946) and the I.E. Repin Leningrad Institute (1953). From 1953 to 1956 he taught at the Alma-Ata School of Art, became a member of the Union of Soviet Artists in 1956. Known for his psychological portraits and concise landscapes.',
+    },
+    thumb: 'assets/images/thumbs/mambeev_thumb.JPG',
+    infographic: { kz: 'assets/images/infographics/mambeev/mambeev_main', ru: 'assets/images/infographics/mambeev/mambeev_main', en: 'assets/images/infographics/mambeev/mambeev_main' },
+  },
+  {
+    id: 'kenbaev', years: '1925 – 1993', color: '#c4843a',
+    name: { kz: 'Молдахмет Сыздықұлы Кенбаев', ru: 'Молдахмет Сыздыкович Кенбаев', en: 'Moldakmet Syzdykovich Kenbaev' },
+    bio: {
+      kz: 'Қазақтың алғашқы кәсіби суретшілерінің бірі (1925–1993). Қазақ КСР халық суретшісі (1985), өнердің құрмет ісесі (1963), профессор. Қостанай облысының Сартол ауылында туылған, Алматы балалық ошағында өндіктелген. Алматы өнеркөл училищесін бітірген (1948) және Мәскеу өнер институтын бітірген (1956). Қазақстан суретшілер одағына басшылық істеген (1956–1959), Алма-Ата ҚАШ және архитектура-құрылыс институтында оқытушылық істеген.',
+      ru: 'Один из первых казахских профессиональных художников (1925–1993), народный художник Казахской ССР (1985), заслуженный деятель искусств (1963), профессор. Родился в ауле Сартол Костанайской области, воспитывался в алматинском детском доме. Окончил Алматинское художественное училище (1948) и Московский художественный институт (1956). Возглавлял Казахстанский союз художников (1956–1959), преподавал в политехническом и архитектурно-строительном институтах Алма-Аты.',
+      en: 'One of the first professional Kazakh artists (1925–1993), People\'s Artist of the Kazakh SSR (1985), Honored Figure of the Arts (1963), professor. Born in the aul of Sartol in Kostanay region, grew up in an Almaty orphanage. Graduated from the Almaty School of Art (1948) and the Moscow Institute of Art (1956). Led the Kazakhstan Union of Artists (1956–1959), taught at the Polytechnic and Architecture-Construction Institutes in Alma-Ata.',
+    },
+    thumb: 'assets/images/thumbs/kenbaev_thumb.JPG',
+    infographic: { kz: 'assets/images/infographics/kenbaev/kenbaev_main', ru: 'assets/images/infographics/kenbaev/kenbaev_main', en: 'assets/images/infographics/kenbaev/kenbaev_main' },
+  },
+  {
+    id: 'akanaev', years: '1948 – н.в.', color: '#9a6b3a',
+    name: { kz: 'Амандос Әтібекұлы Аканаев', ru: 'Амандос Атибекович Аканаев', en: 'Amandos Atibekovich Akanaev' },
+    bio: {
+      kz: 'Қазақстандық суретші, Қазақстан Республикасының мемлекеттік сыйлығының лауреаты әндеулемінде және өнерде (2010). Мичурина елді мекенінде (қазіргі Энбекші) Алматы облысында туылған. Н.В. Гоголь атындағы Алматы өнеркөл училищесін бітірген (1967) және кейіннен живопись оқыту. \'Неотрадиционализм\' стилінің жүйелеушісі, еуропалық дәстүрлерді Азия номадтық өнеріндегі пластикасымен байланыстырса, құрылымдалған әндеулемені металл, теңткелі ұстақы және ағашпен пайдалану; \'Қазақстан Республикасы Өнер академиясы\' қорының ағымындағы мәдени мұра сақтау ынамындағы ағартушысы.',
+      ru: 'Казахстанский художник, лауреат Государственной премии РК в области литературы и искусства (2010). Родился в поселке Мичурина (ныне Энбекши) Алматинской области. Окончил Алматинское художественное училище им. Н.В. Гоголя (1967), где позже преподавал живопись. Создатель стиля \'неотрадиционализм\', сочетающего европейские традиции с пластикой номадного искусства Азии, используя рельефную живопись с металлом, текстилем и деревом; инициатор фонда \'Академия художеств РК\' по сохранению культурного наследия.',
+      en: 'Kazakhstani artist, laureate of the State Prize of the Republic of Kazakhstan in Literature and the Arts (2010). Born in the settlement of Michurina (now Enbekshi) in Almaty region. Graduated from the N.V. Gogol Almaty School of Art (1967), where he later taught painting. Creator of the \'neo-traditionalism\' style, combining European traditions with the plasticity of Asian nomadic art, using relief painting with metal, textiles and wood; initiator of the \'Academy of the Arts of the RK\' fund for the preservation of cultural heritage.',
+    },
+    thumb: 'assets/images/thumbs/akanaev_thumb.JPG',
+    infographic: { kz: 'assets/images/infographics/akanaev/akanaev_main', ru: 'assets/images/infographics/akanaev/akanaev_main', en: 'assets/images/infographics/akanaev/akanaev_main' },
+  },
 ];
 
 // ============================================================
@@ -1358,13 +1402,13 @@ async function init() {
   initSwipe();
 
   // Начальный язык и состояние
-  S.lang         = 'kz';
+  S.lang         = 'ru';
   S.current      = 0;
   S.activeArtist = S.artists[0];
   D.track.style.transform = 'translateX(0%)';
 
   // Применяем переводы
-  setLang('kz');
+  setLang('ru');
 
   // Показываем подсказку об ориентации телефона на 5 секунд
   showPhoneOrientationHint();
