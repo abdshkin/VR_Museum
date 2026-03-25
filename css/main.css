@@ -440,7 +440,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   background: rgba(15, 13, 10, 0.95);
@@ -448,12 +448,18 @@ body {
   z-index: 200;
   opacity: 1;
   transition: opacity 0.6s ease;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
 }
 .phone-orientation-hint.hidden {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
+}
+@media (max-width: 640px) {
+  .phone-orientation-hint {
+    display: flex;
+  }
 }
 .phone-orientation-content {
   text-align: center;
@@ -692,6 +698,97 @@ body {
 @media (min-width: 768px) {
   .card-image-wrap { max-height: 55vh; aspect-ratio: 4/5; }
   #slider-container { max-width: 500px; }
+}
+@media (min-width: 1024px) {
+  /* Десктоп: улучшенный слайдер */
+  #slider-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 80px;
+    padding-bottom: 60px;
+  }
+  
+  #slider-container {
+    max-width: 700px;
+    margin-top: 40px;
+  }
+  
+  .card-image-wrap {
+    max-height: 65vh;
+    aspect-ratio: 3/4;
+  }
+  
+  .artist-card {
+    box-shadow: 0 32px 96px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,168,83,0.12);
+  }
+  
+  .artist-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 40px 120px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,168,83,0.25);
+  }
+  
+  .section-title {
+    font-size: 34px;
+    margin-bottom: 12px;
+  }
+  
+  .section-eyebrow {
+    font-size: 13px;
+    letter-spacing: 0.2em;
+  }
+  
+  #bio-panel {
+    max-width: 600px;
+    padding: 40px 50px;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+  }
+  
+  #bio-name {
+    font-size: 26px;
+    margin-top: 20px;
+  }
+  
+  #bio-years {
+    font-size: 16px;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+  
+  #bio-text {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 28px;
+  }
+  
+  #bio-enter-btn {
+    padding: 14px 32px;
+    font-size: 16px;
+  }
+  
+  /* Стрелки слайдера больше и заметнее */
+  .slider-arrow {
+    width: 48px;
+    height: 48px;
+    font-size: 28px;
+  }
+  
+  .slider-arrow:hover {
+    transform: scale(1.08);
+    background: rgba(212,168,83,0.18);
+  }
+  
+  /* Увеличиваем точки навигации */
+  .dot {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .dot.active {
+    width: 32px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }

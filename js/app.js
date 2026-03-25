@@ -338,6 +338,10 @@ function setLang(lang) {
 // ============================================================
 // ПОДСКАЗКА ОБ ОРИЕНТАЦИИ ТЕЛЕФОНА
 // ============================================================
+function isMobileDevice() {
+  return window.innerWidth <= 640;
+}
+
 function updatePhoneOrientationHint(lang) {
   var hintText = document.getElementById('phone-orientation-text');
   var hintSubtext = document.getElementById('phone-orientation-subtext');
@@ -353,11 +357,43 @@ function hidePhoneOrientationHint() {
 }
 
 function showPhoneOrientationHint() {
+  // Показываем только на мобильных устройствах
+  if (!isMobileDevice()) return;
+  
   var hint = document.getElementById('phone-orientation-hint');
   if (hint) {
     hint.classList.remove('hidden');
     updatePhoneOrientationHint(S.lang);
   }
+}
+
+function setupPhoneOrientationHintHandlers() {
+  var hint = document.getElementById('phone-orientation-hint');
+  if (!hint) return;
+  
+  // Закрытие по клику
+  hint.addEventListener('click', function() {
+    hidePhoneOrientationHint();
+  });
+  
+  // Закрытие при повороте экрана (портретная ориентация)
+  function checkOrientation() {
+    var isPortrait = window.innerHeight >= window.innerWidth;
+    if (isPortrait) {
+      hidePhoneOrientationHint();
+    }
+  }
+  
+  window.addEventListener('orientationchange', function() {
+    setTimeout(checkOrientation, 100);
+  });
+  
+  window.addEventListener('resize', function() {
+    // Переоценим является ли это мобильным устройством
+    if (!isMobileDevice()) {
+      hidePhoneOrientationHint();
+    }
+  });
 }
 
 // ============================================================
@@ -1410,8 +1446,9 @@ async function init() {
   // Применяем переводы
   setLang('ru');
 
-  // Показываем подсказку об ориентации телефона на 5 секунд
+  // Показываем подсказку об ориентации телефона на 5 секунд (только на мобиле)
   showPhoneOrientationHint();
+  setupPhoneOrientationHintHandlers();
   setTimeout(function() {
     hidePhoneOrientationHint();
   }, 5000);
