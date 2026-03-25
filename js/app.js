@@ -68,17 +68,7 @@ var ARTISTS_FALLBACK = [
     thumb: 'assets/images/thumbs/galimbayeva_thumb.jpg',
     infographic: { kz: 'assets/images/infographics/galymbaeva/galymbaeva_main', ru: 'assets/images/infographics/galymbaeva/galymbaeva_main', en: 'assets/images/infographics/galymbaeva/galymbaeva_main' },
   },
-  {
-    id: 'mullashev', years: '1944 – н.в.', color: '#3a7a5c',
-    name: { kz: 'Камиль Муллашев', ru: 'Камиль Муллашев', en: 'Kamil Mullashev' },
-    bio: {
-      kz: 'Қазақстан мен Татарстанның еңбек сіңірген суретшісі. «Жер және уақыт. Қазақстан» триптихі Париждегі Гранд-Пале мен бүкіл дүниежүзінде таныс.',
-      ru: 'Заслуженный деятель искусств Казахстана и народный художник Татарстана. Триптих «Земля и время. Казахстан» экспонировался в Гранд-Пале в Париже, серебряная медаль Академии художеств Франции.',
-      en: "Honored Artist of Kazakhstan and People's Artist of Tatarstan. His triptych 'Land and Time. Kazakhstan' was shown at the Grand Palais in Paris, winning a silver medal from the French Academy of Arts.",
-    },
-    thumb: 'assets/images/thumbs/mullashev_thumb.jpg',
-    infographic: { kz: '', ru: '', en: '' },
-  },
+  
   {
     id: 'ismailova', years: '1929 – 2013', color: '#c44a4a',
     name: { kz: 'Гүлфайрус Ысмайылова', ru: 'Гульфайрус Исмаилова', en: 'Gulfairous Ismailova' },
@@ -410,7 +400,7 @@ function showView(name) {
 }
 
 function enterRoom(artist) {
-  S.activeArtist = artist;
+  S.activeArtist = artist;w
   hideBio();
   stopAuto();
   D.roomLabelName.textContent  = artist.name[S.lang] || artist.name.en;
