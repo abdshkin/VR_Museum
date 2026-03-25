@@ -43,27 +43,6 @@
       }
     },
     {
-      "id": "mullashev",
-      "years": "1944 – н.в.",
-      "color": "#3a7a5c",
-      "name": {
-        "kz": "Камиль Муллашев",
-        "ru": "Камиль Муллашев",
-        "en": "Kamil Mullashev"
-      },
-      "bio": {
-        "kz": "Қазақстан мен Татарстанның еңбек сіңірген суретшісі. Қытайдың Үрімжі қаласында туылған (1944), Суриков атындағы МКӨИ-ді бітірген (1978). «Жер және уақыт. Қазақстан» триптихі Париждегі Гранд-Пале мен бүкіл дүниежүзінде таныс. Қазақстан мен Татарстан мемлекеттік сыйлықтарының лауреаты.",
-        "ru": "Заслуженный деятель искусств Казахстана и народный художник Татарстана. Родился в Урумчи (КНР, 1944), окончил МГХИ им. Сурикова (1978). Его триптих «Земля и время. Казахстан» экспонировался в Гранд-Пале в Париже, удостоен серебряной медали Академии художеств Франции. Лауреат Госпремий Казахстана и Татарстана.",
-        "en": "Honored artist of Kazakhstan and People's Artist of Tatarstan. Born in Urumqi, China (1944), graduated from the Surikov Art Institute in Moscow (1978). His triptych 'Land and Time. Kazakhstan' was shown at the Grand Palais in Paris and won a silver medal from the French Academy of Arts."
-      },
-      "thumb": "assets/images/thumbs/mullashev_thumb.jpg",
-      "infographic": {
-        "kz": "",
-        "ru": "",
-        "en": ""
-      }
-    },
-    {
       "id": "ismailova",
       "years": "1929 – 2013",
       "color": "#c44a4a",

@@ -14,7 +14,6 @@ from PIL import Image, ImageDraw, ImageFont
 ARTISTS = [
     {"id": "telzhanov",   "name": "Telzhanov",   "years": "1918–1979", "color": (196, 132, 58)},
     {"id": "galimbayeva", "name": "Galimbayeva", "years": "1917–1991", "color": (122, 92, 158)},
-    {"id": "mullashev",   "name": "Mullashev",   "years": "1922–2001", "color": (58,  122, 92)},
     {"id": "ismailova",   "name": "Ismailova",   "years": "1929–2017", "color": (196, 74,  74)},
     {"id": "kasteev",     "name": "Kasteev",     "years": "1904–1973", "color": (74,  110, 158)},
 ]

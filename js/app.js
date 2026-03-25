@@ -400,7 +400,7 @@ function showView(name) {
 }
 
 function enterRoom(artist) {
-  S.activeArtist = artist;w
+  S.activeArtist = artist;
   hideBio();
   stopAuto();
   D.roomLabelName.textContent  = artist.name[S.lang] || artist.name.en;
@@ -846,11 +846,6 @@ function buildRoom(artist) {
     roomGroup.add(lampCone);
   });
 
-  // ── Главная панель (инфографика или заглушка) ─────────
-
-  var infPath = artist.infographic && artist.infographic[S.lang]
-    ? artist.infographic[S.lang] : null;
-
   // ── 4 стены с инфографикой (LOD система) ────────────────
 
   var framePad = 0.12;
@@ -859,12 +854,6 @@ function buildRoom(artist) {
   // Определяем пути based на структуре папок (новые художники в папках)
   function getInflGraphicPath(position, lang) {
     var artistId = artist.id;
-    
-    // Исключаем художников без инфографик
-    if (artistId === 'mullashev') {
-      return null;
-    }
-    
     var positionStr = position === 'main' ? 'main' : position;
     var folderPath = 'assets/images/infographics/' + artistId + '/' + artistId + '_' + positionStr + '_' + lang;
     return folderPath;
