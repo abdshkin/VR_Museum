@@ -422,6 +422,9 @@ function goBack() {
 // ============================================================
 
 var threeCtx = null;
+var textureLoader = new THREE.TextureLoader();
+textureLoader.setCrossOrigin('anonymous');
+var textureCache = {};
 
 // ── Вспомогательные материалы ──────────────────────────────
 
@@ -554,45 +557,89 @@ function makeRugTexture(color, size) {
  * @param {function} onLODLoad - callback(tex, lod) где lod = 1,2,3
  * @param {function} onError - callback на ошибку
  */
-function loadImageWithLOD(basePathWithLang, onLODLoad, onError) {
-  var sizes = ['250kb', '1mb', 'original'];
+function loadTextureCached(fullPath, onLoad, onError) {
+  var cached = textureCache[fullPath];
+  if (cached) {
+    if (cached.status === 'loaded') {
+      onLoad(cached.texture);
+      return;
+    }
+    if (cached.status === 'loading') {
+      cached.callbacks.push({ onLoad: onLoad, onError: onError });
+      return;
+    }
+  }
+
+  textureCache[fullPath] = {
+    status: 'loading',
+    texture: null,
+    callbacks: [{ onLoad: onLoad, onError: onError }]
+  };
+
+  textureLoader.load(
+    fullPath,
+    function(tex) {
+      var entry = textureCache[fullPath];
+      entry.status = 'loaded';
+      entry.texture = tex;
+      entry.callbacks.forEach(function(cb) {
+        cb.onLoad(tex);
+      });
+      entry.callbacks = [];
+    },
+    undefined,
+    function(err) {
+      var entry = textureCache[fullPath];
+      var callbacks = entry ? entry.callbacks : [];
+      delete textureCache[fullPath];
+      callbacks.forEach(function(cb) {
+        if (cb.onError) cb.onError(err);
+      });
+    }
+  );
+}
+
+function loadImageWithLOD(basePathWithLang, options) {
+  options = options || {};
+  var sizes = options.sizes || ['250kb', '1mb', 'original'];
   var currentLOD = 0;
+  var cancelled = false;
 
   function loadNextLOD() {
-    if (currentLOD >= sizes.length) return;
-    
+    if (cancelled || currentLOD >= sizes.length) return;
+
     var size = sizes[currentLOD];
     var fullPath = basePathWithLang + '_' + size + '.png';
 
-    var loader = new THREE.TextureLoader();
-    loader.setCrossOrigin('anonymous');
-    loader.load(
+    loadTextureCached(
       fullPath,
       function(tex) {
+        if (cancelled) return;
         currentLOD++;
-        onLODLoad(tex, currentLOD);
-        // Продолжаем загружать следующую версию
-        loadNextLOD();
+        if (options.onLODLoad) options.onLODLoad(tex, currentLOD, size);
+        if (options.progressive !== false) {
+          loadNextLOD();
+        }
       },
-      undefined,
       function(err) {
-        // Если ошибка на первом (250kb) - попробуем следующий
-        if (currentLOD === 0) {
-          currentLOD = 1;
+        if (cancelled) return;
+        if (currentLOD < sizes.length - 1) {
+          currentLOD++;
           loadNextLOD();
-        } else if (currentLOD === 1) {
-          // Если ошибка на 1mb - попробуем original
-          currentLOD = 2;
-          loadNextLOD();
-        } else {
-          // Все версии не загрузились
-          if (onError) onError(err);
+        } else if (options.onError) {
+          options.onError(err);
         }
       }
     );
   }
 
   loadNextLOD();
+
+  return {
+    cancel: function() {
+      cancelled = true;
+    }
+  };
 }
 
 // ── Основная функция ───────────────────────────────────────
@@ -859,70 +906,75 @@ function buildRoom(artist) {
     return folderPath;
   }
 
-  // Функция для добавления картины на стену с LOD
-  function addPaintingToWall(position, wallConfig) {
+  var paintingLoaders = [];
+
+  function ensureWallFrame(position, wallConfig, panW) {
+    if (!wallConfig.meshGroup) {
+      wallConfig.meshGroup = new THREE.Group();
+      wallConfig.meshGroup.position.copy(wallConfig.panelPos);
+      if (wallConfig.rotation && wallConfig.rotation.y !== undefined) {
+        wallConfig.meshGroup.rotation.y = wallConfig.rotation.y;
+      }
+      roomGroup.add(wallConfig.meshGroup);
+    }
+
+    while (wallConfig.meshGroup.children.length > 0) {
+      wallConfig.meshGroup.remove(wallConfig.meshGroup.children[0]);
+    }
+
+    var frameColor = position === 'main' ? '#7a5512' : '#5a3512';
+    var frameMat = createMaterial('lambert', { color: frameColor });
+    var frame = new THREE.Mesh(
+      new THREE.BoxGeometry(panW + framePad * 2, panH + framePad * 2, 0.05),
+      frameMat
+    );
+    frame.position.set(0, 0, 0);
+    frame.isFrame = true;
+    wallConfig.meshGroup.add(frame);
+  }
+
+  // Функция для добавления картины на стену с оптимизированной LOD-загрузкой
+  function addPaintingToWall(position, wallConfig, options) {
     var basePath = getInflGraphicPath(position, S.lang);
-    
-    // Пропускаем загрузку если пути нет
     if (!basePath) {
       return;
     }
 
-    loadImageWithLOD(basePath, function(tex, lod) {
-      // Рассчитываем размер на основе aspect ratio
-      var imgWidth = tex.image.width;
-      var imgHeight = tex.image.height;
-      var aspectRatio = imgWidth / imgHeight;
-      var panW = panH * aspectRatio;
+    options = options || {};
 
-      // Если это первая загрузка (250kb) - создаём раму и группу
-      if (lod === 1) {
-        // Создаём группу для картины на этой стене (если еще не создана)
-        if (!wallConfig.meshGroup) {
-          wallConfig.meshGroup = new THREE.Group();
-          wallConfig.meshGroup.position.copy(wallConfig.panelPos);
-          // Применяем rotation для боковых стен
-          if (wallConfig.rotation && wallConfig.rotation.y !== undefined) {
-            wallConfig.meshGroup.rotation.y = wallConfig.rotation.y;
-          }
-          roomGroup.add(wallConfig.meshGroup);
+    var loadTask = loadImageWithLOD(basePath, {
+      sizes: options.sizes,
+      progressive: options.progressive !== false,
+      onLODLoad: function(tex, lod) {
+        if (!threeCtx || threeCtx.roomGroup !== roomGroup) return;
+
+        var imgWidth = tex.image.width;
+        var imgHeight = tex.image.height;
+        var aspectRatio = imgWidth / imgHeight;
+        var panW = panH * aspectRatio;
+
+        if (lod === 1 || !wallConfig.meshGroup) {
+          ensureWallFrame(position, wallConfig, panW);
         }
 
-        // Очищаем старые дети при первой загрузке
-        while (wallConfig.meshGroup.children.length > 0) {
-          wallConfig.meshGroup.remove(wallConfig.meshGroup.children[0]);
+        if (wallConfig.meshGroup.children.length > 1) {
+          wallConfig.meshGroup.remove(wallConfig.meshGroup.children[wallConfig.meshGroup.children.length - 1]);
         }
 
-        var frameColor = position === 'main' ? '#7a5512' : '#5a3512';
-        var frameMat = createMaterial('lambert', { color: frameColor });
-        var frame = new THREE.Mesh(
-          new THREE.BoxGeometry(panW + framePad*2, panH + framePad*2, 0.05),
-          frameMat
+        var panelMat = createMaterial('lambert', { map: tex });
+        var panel = new THREE.Mesh(
+          new THREE.BoxGeometry(panW, panH, 0.02),
+          panelMat
         );
-        frame.position.set(0, 0, 0);  // локальная позиция внутри meshGroup
-        frame.isFrame = true;  // пометка для рамы
-        wallConfig.meshGroup.add(frame);
+        panel.position.set(0, 0, 0.02);
+        wallConfig.meshGroup.add(panel);
+      },
+      onError: function(err) {
+        console.warn('Failed to load painting at position ' + position + ':', err);
       }
-
-      // Обновляем или создаём материал картины
-      var panelMat = createMaterial('lambert', { map: tex });
-      
-      // Удаляем старую картину (не раму) если существует другая версия LOD
-      if (wallConfig.meshGroup.children.length > 1) {
-        // Удаляем последнего ребенка (предыдущая картинка)
-        wallConfig.meshGroup.remove(wallConfig.meshGroup.children[wallConfig.meshGroup.children.length - 1]);
-      }
-      
-      var panel = new THREE.Mesh(
-        new THREE.BoxGeometry(panW, panH, 0.02),
-        panelMat
-      );
-      panel.position.set(0, 0, 0.02);  // локальная позиция внутри meshGroup
-      wallConfig.meshGroup.add(panel);
-      textures.push(tex);
-    }, function(err) {
-      console.warn('Failed to load painting at position ' + position + ':', err);
     });
+
+    paintingLoaders.push(loadTask);
   }
 
   // Конфигурация для 4-х стен (передняя, боковые, задняя)
@@ -953,39 +1005,35 @@ function buildRoom(artist) {
     }
   };
 
-  // Загружаем main картину на переднюю стену
-  addPaintingToWall('main', wallConfigs.main);
+  // Сначала грузим главную картину прогрессивно во всех качествах
+  addPaintingToWall('main', wallConfigs.main, {
+    sizes: ['250kb', '1mb', 'original'],
+    progressive: true
+  });
 
-  // Загружаем боковые и заднюю картины
+  // Боковые и заднюю стены сначала грузим только в лёгком качестве
   var sidePositions = ['left', 'right', 'back'];
   var sideNumbers = [1, 2, 3];
-  
+
   sideNumbers.forEach(function(num, idx) {
-    addPaintingToWall(num, wallConfigs[sidePositions[idx]]);
-  });
-
-  // ── Старый код (заглушки) был здесь, но теперь заменён на новую систему ────
-
-
-  // ── Скамейка для посетителей ──────────────────────────
-
-  var benchGroup = new THREE.Group();
-  benchGroup.position.set(0, 0, 1.2);
-  roomGroup.add(benchGroup);
-
-  // Сиденье
-  addBox(1.8, 0.07, 0.44, 0, 0.48, 0, mBench, benchGroup);
-  // Спинка
-  addBox(1.8, 0.55, 0.06, 0, 0.78, -0.22, mBench, benchGroup);
-  // Мягкая накладка
-  addBox(1.75, 0.04, 0.4, 0, 0.52, 0.01, mBenchLeather, benchGroup);
-  // Ножки
-  var legPosX = [-0.78, 0.78], legPosZ = [-0.18, 0.18];
-  legPosX.forEach(function(x) {
-    legPosZ.forEach(function(z) {
-      addBox(0.06, 0.46, 0.06, x, 0.23, z, mDarkMid, benchGroup);
+    addPaintingToWall(num, wallConfigs[sidePositions[idx]], {
+      sizes: ['250kb'],
+      progressive: false
     });
   });
+
+  // Затем догружаем улучшенное качество боковых стен с небольшой задержкой,
+  // чтобы не конкурировать с первым рендером комнаты
+  setTimeout(function() {
+    if (!threeCtx || threeCtx.roomGroup !== roomGroup) return;
+
+    sideNumbers.forEach(function(num, idx) {
+      addPaintingToWall(num, wallConfigs[sidePositions[idx]], {
+        sizes: ['1mb', 'original'],
+        progressive: true
+      });
+    });
+  }, 800);
 
   // ── Пьедестал со сферой ──────────────────────────────
 
@@ -1050,7 +1098,8 @@ function buildRoom(artist) {
     ring:           ring,
     chandGroup:     chandGroup,
     chandPt:        chandPt,
-    textures:       textures
+    textures:       textures,
+    paintingLoaders: paintingLoaders
   };
 
   // ── Цикл анимации ─────────────────────────────────────
@@ -1088,6 +1137,12 @@ function destroyRoom() {
   cancelAnimationFrame(threeCtx.animId);
 
   if (threeCtx.orbit) threeCtx.orbit.destroy();
+
+  if (threeCtx.paintingLoaders) {
+    threeCtx.paintingLoaders.forEach(function(loader) {
+      if (loader && loader.cancel) loader.cancel();
+    });
+  }
 
   if (threeCtx.resizeObserver) {
     threeCtx.resizeObserver.disconnect();
