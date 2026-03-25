@@ -58,7 +58,7 @@ var ARTISTS_FALLBACK = [
     infographic: { kz: 'assets/images/infographics/telzhanov/telzhanov_main', ru: 'assets/images/infographics/telzhanov/telzhanov_main', en: 'assets/images/infographics/telzhanov/telzhanov_main' },
   },
   {
-    id: 'galimbayeva', years: '1917 – 2008', color: '#7a5c9e',
+    id: 'galymbaeva', years: '1917 – 2008', color: '#7a5c9e',
     name: { kz: 'Айша Ғалымбаева', ru: 'Айша Галимбаева', en: 'Aisha Galimbayeva' },
     bio: {
       kz: 'Қазақстанның алғашқы кәсіби суретші әйелі, ҚазКСР халық суретшісі (1967). ВГИК кино факультетін бітірген (1949). «Қазақ халық костюмі» альбомының авторы.',
