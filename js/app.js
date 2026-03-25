@@ -55,7 +55,7 @@ var ARTISTS_FALLBACK = [
       en: "People's Artist of the Kazakh SSR and USSR (1978). Born in Omsk, graduated from the Repin Institute (1953). His works 'Zhamal', 'Sounds of the Dombra' and 'Native Land' are classics of Kazakh painting.",
     },
     thumb: 'assets/images/thumbs/telzhanov_thumb.jpg',
-    infographic: { kz: 'assets/images/infographics/telzhanov_kz.jpg', ru: 'assets/images/infographics/telzhanov_ru.jpg', en: 'assets/images/infographics/telzhanov_en.jpg' },
+    infographic: { kz: 'assets/images/infographics/telzhanov/telzhanov_main', ru: 'assets/images/infographics/telzhanov/telzhanov_main', en: 'assets/images/infographics/telzhanov/telzhanov_main' },
   },
   {
     id: 'galimbayeva', years: '1917 – 2008', color: '#7a5c9e',
@@ -66,7 +66,7 @@ var ARTISTS_FALLBACK = [
       en: "The first professional Kazakh female artist, People's Artist of the Kazakh SSR (1967). Graduated from VGIK (1949). Author of the album 'Kazakh National Costume'.",
     },
     thumb: 'assets/images/thumbs/galimbayeva_thumb.jpg',
-    infographic: { kz: 'assets/images/infographics/galimbayeva_kz.jpg', ru: 'assets/images/infographics/galimbayeva_ru.jpg', en: 'assets/images/infographics/galimbayeva_en.jpg' },
+    infographic: { kz: 'assets/images/infographics/galymbaeva/galymbaeva_main', ru: 'assets/images/infographics/galymbaeva/galymbaeva_main', en: 'assets/images/infographics/galymbaeva/galymbaeva_main' },
   },
   {
     id: 'mullashev', years: '1944 – н.в.', color: '#3a7a5c',
@@ -77,7 +77,7 @@ var ARTISTS_FALLBACK = [
       en: "Honored Artist of Kazakhstan and People's Artist of Tatarstan. His triptych 'Land and Time. Kazakhstan' was shown at the Grand Palais in Paris, winning a silver medal from the French Academy of Arts.",
     },
     thumb: 'assets/images/thumbs/mullashev_thumb.jpg',
-    infographic: { kz: 'assets/images/infographics/mullashev_kz.jpg', ru: 'assets/images/infographics/mullashev_ru.jpg', en: 'assets/images/infographics/mullashev_en.jpg' },
+    infographic: { kz: '', ru: '', en: '' },
   },
   {
     id: 'ismailova', years: '1929 – 2013', color: '#c44a4a',
@@ -88,7 +88,7 @@ var ARTISTS_FALLBACK = [
       en: "People's Artist of the Kazakh SSR (1987), actress. Her 'Kazakh Waltz' is the centrepiece of the Kasteev Museum. For 16 years chief designer of the Abai Opera Theatre. Production designer of 'Kyz Zhibek'.",
     },
     thumb: 'assets/images/thumbs/ismailova_thumb.jpg',
-    infographic: { kz: 'assets/images/infographics/ismailova_kz.jpg', ru: 'assets/images/infographics/ismailova_ru.jpg', en: 'assets/images/infographics/ismailova_en.jpg' },
+    infographic: { kz: 'assets/images/infographics/ismailova/ismailova_main', ru: 'assets/images/infographics/ismailova/ismailova_main', en: 'assets/images/infographics/ismailova/ismailova_main' },
   },
   {
     id: 'kasteev', years: '1904 – 1973', color: '#4a6e9e',
@@ -99,7 +99,7 @@ var ARTISTS_FALLBACK = [
       en: "Pioneer of Kazakh professional fine art, People's Artist of the Kazakh SSR (1944). Created over 1,100 works. The State Museum of Arts in Almaty bears his name.",
     },
     thumb: 'assets/images/thumbs/kasteev_thumb.jpg',
-    infographic: { kz: 'assets/images/infographics/kasteev_kz.jpg', ru: 'assets/images/infographics/kasteev_ru.jpg', en: 'assets/images/infographics/kasteev_en.jpg' },
+    infographic: { kz: 'assets/images/infographics/kasteev/kasteev_main', ru: 'assets/images/infographics/kasteev/kasteev_main', en: 'assets/images/infographics/kasteev/kasteev_main' },
   },
   {
     id: 'hludov', years: '1850 – 1935', color: '#5a8c6a',
@@ -869,6 +869,12 @@ function buildRoom(artist) {
   // Определяем пути based на структуре папок (новые художники в папках)
   function getInflGraphicPath(position, lang) {
     var artistId = artist.id;
+    
+    // Исключаем художников без инфографик
+    if (artistId === 'mullashev') {
+      return null;
+    }
+    
     var positionStr = position === 'main' ? 'main' : position;
     var folderPath = 'assets/images/infographics/' + artistId + '/' + artistId + '_' + positionStr + '_' + lang;
     return folderPath;
@@ -877,6 +883,11 @@ function buildRoom(artist) {
   // Функция для добавления картины на стену с LOD
   function addPaintingToWall(position, wallConfig) {
     var basePath = getInflGraphicPath(position, S.lang);
+    
+    // Пропускаем загрузку если пути нет
+    if (!basePath) {
+      return;
+    }
 
     loadImageWithLOD(basePath, function(tex, lod) {
       // Рассчитываем размер на основе aspect ratio

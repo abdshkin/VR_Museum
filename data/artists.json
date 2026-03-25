@@ -16,9 +16,9 @@
       },
       "thumb": "assets/images/thumbs/telzhanov_thumb.jpg",
       "infographic": {
-        "kz": "assets/images/infographics/telzhanov_kz.jpg",
-        "ru": "assets/images/infographics/telzhanov_ru.jpg",
-        "en": "assets/images/infographics/telzhanov_en.jpg"
+        "kz": "assets/images/infographics/telzhanov/telzhanov_main",
+        "ru": "assets/images/infographics/telzhanov/telzhanov_main",
+        "en": "assets/images/infographics/telzhanov/telzhanov_main"
       }
     },
     {
@@ -37,9 +37,9 @@
       },
       "thumb": "assets/images/thumbs/galimbayeva_thumb.jpg",
       "infographic": {
-        "kz": "assets/images/infographics/galimbayeva_kz.jpg",
-        "ru": "assets/images/infographics/galimbayeva_ru.jpg",
-        "en": "assets/images/infographics/galimbayeva_en.jpg"
+        "kz": "assets/images/infographics/galymbaeva/galymbaeva_main",
+        "ru": "assets/images/infographics/galymbaeva/galymbaeva_main",
+        "en": "assets/images/infographics/galymbaeva/galymbaeva_main"
       }
     },
     {
@@ -58,9 +58,9 @@
       },
       "thumb": "assets/images/thumbs/mullashev_thumb.jpg",
       "infographic": {
-        "kz": "assets/images/infographics/mullashev_kz.jpg",
-        "ru": "assets/images/infographics/mullashev_ru.jpg",
-        "en": "assets/images/infographics/mullashev_en.jpg"
+        "kz": "",
+        "ru": "",
+        "en": ""
       }
     },
     {
@@ -79,9 +79,9 @@
       },
       "thumb": "assets/images/thumbs/ismailova_thumb.jpg",
       "infographic": {
-        "kz": "assets/images/infographics/ismailova_kz.jpg",
-        "ru": "assets/images/infographics/ismailova_ru.jpg",
-        "en": "assets/images/infographics/ismailova_en.jpg"
+        "kz": "assets/images/infographics/ismailova/ismailova_main",
+        "ru": "assets/images/infographics/ismailova/ismailova_main",
+        "en": "assets/images/infographics/ismailova/ismailova_main"
       }
     },
     {
@@ -100,9 +100,9 @@
       },
       "thumb": "assets/images/thumbs/kasteev_thumb.jpg",
       "infographic": {
-        "kz": "assets/images/infographics/kasteev_kz.jpg",
-        "ru": "assets/images/infographics/kasteev_ru.jpg",
-        "en": "assets/images/infographics/kasteev_en.jpg"
+        "kz": "assets/images/infographics/kasteev/kasteev_main",
+        "ru": "assets/images/infographics/kasteev/kasteev_main",
+        "en": "assets/images/infographics/kasteev/kasteev_main"
       }
     },
     {
