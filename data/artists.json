@@ -63,6 +63,27 @@
         "en": "assets/images/infographics/ismailova/ismailova_main"
       }
     },
+    {
+      "id": "kasteev",
+      "years": "1904 – 1973",
+      "color": "#4a6e9e",
+      "name": {
+        "kz": "Әбілхан Қастеев",
+        "ru": "Абылхан Кастеев",
+        "en": "Abylkhan Kasteev"
+      },
+      "bio": {
+        "kz": "Қазақ кәсіби кескіндемесінің негізін қалаушы, ҚазКСР халық суретшісі (1944). 1100-ден астам туынды жасаған. Алматыдағы мемлекеттік өнер мұражайы оның атымен аталған.",
+        "ru": "Основоположник казахского профессионального изобразительного искусства, народный художник КазССР (1944). Создал свыше 1100 произведений. Именем художника назван Государственный музей искусств в Алматы.",
+        "en": "Pioneer of Kazakh professional fine art, People's Artist of the Kazakh SSR (1944). Created over 1,100 works. The State Museum of Arts in Almaty bears his name."
+      },
+      "thumb": "assets/images/thumbs/kasteev_thumb.jpg",
+      "infographic": {
+        "kz": "assets/images/infographics/kasteev/kasteev_main",
+        "ru": "assets/images/infographics/kasteev/kasteev_main",
+        "en": "assets/images/infographics/kasteev/kasteev_main"
+      }
+    },
 
     {
       "id": "akanaev",
